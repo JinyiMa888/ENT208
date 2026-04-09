@@ -13,53 +13,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { resumeText, jobTitle, company, jobDescription } = await req.json();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get user from token
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
-    const { data: { user }, error: userError } = await anonClient.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { filePath, jobTitle, company, jobDescription } = await req.json();
-
-    if (!filePath || !jobTitle) {
-      return new Response(JSON.stringify({ error: "filePath and jobTitle are required" }), {
+    if (!resumeText || !jobTitle) {
+      return new Response(JSON.stringify({ error: "resumeText and jobTitle are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Download the resume file
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from("resumes")
-      .download(filePath);
-
-    if (downloadError) {
-      return new Response(JSON.stringify({ error: "Failed to download resume" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const resumeText = await fileData.text();
 
     const prompt = `你是一位专业的简历优化顾问。请分析以下简历与目标职位的匹配度，并给出优化建议。
 
@@ -68,7 +29,7 @@ ${company ? `目标公司：${company}` : ""}
 ${jobDescription ? `职位描述：${jobDescription}` : ""}
 
 简历内容：
-${resumeText}
+${resumeText.substring(0, 8000)}
 
 请严格按以下JSON格式返回分析结果（不要包含其他文字）：
 {
@@ -135,18 +96,6 @@ ${resumeText}
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Save analysis to database
-    await supabase.from("resume_analyses").insert({
-      user_id: user.id,
-      job_title: jobTitle,
-      company: company || null,
-      match_score: result.matchScore,
-      dimensions: result.dimensions,
-      suggestions: result.suggestions,
-      optimized_content: result.optimizedContent,
-      file_path: filePath,
-    });
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
-import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, History, FileText } from "lucide-react";
 
@@ -16,35 +14,23 @@ interface AnalysisRecord {
 }
 
 const HistoryPage = () => {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const [records, setRecords] = useState<AnalysisRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-  }, [user, authLoading, navigate]);
+    const fetchRecords = async () => {
+      const { data, error } = await supabase
+        .from("resume_analyses")
+        .select("id, job_title, company, match_score, created_at")
+        .order("created_at", { ascending: false });
 
-  useEffect(() => {
-    if (user) {
-      fetchRecords();
-    }
-  }, [user]);
-
-  const fetchRecords = async () => {
-    const { data, error } = await supabase
-      .from("resume_analyses")
-      .select("id, job_title, company, match_score, created_at")
-      .eq("user_id", user!.id)
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setRecords(data);
-    }
-    setLoading(false);
-  };
+      if (!error && data) {
+        setRecords(data);
+      }
+      setLoading(false);
+    };
+    fetchRecords();
+  }, []);
 
   const getScoreBadge = (score: number) => {
     if (score >= 80) return <Badge className="bg-green-100 text-green-700">优秀 {score}%</Badge>;
@@ -52,10 +38,13 @@ const HistoryPage = () => {
     return <Badge className="bg-red-100 text-red-700">待优化 {score}%</Badge>;
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
