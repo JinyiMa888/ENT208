@@ -1,11 +1,34 @@
-
+import { extractText } from "https://esm.sh/unpdf@0.12.1";
+import * as mammoth from "https://esm.sh/mammoth@1.8.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const OPENAI_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+async function extractResumeText(fileBase64: string, fileName: string): Promise<string> {
+  const binaryString = atob(fileBase64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+
+  if (ext === "pdf") {
+    const { text } = await extractText(bytes, { mergePages: true });
+    return text.slice(0, 40000);
+  } else if (ext === "docx" || ext === "doc") {
+    const result = await mammoth.extractRawText({ arrayBuffer: bytes.buffer });
+    return result.value.slice(0, 40000);
+  } else if (ext === "txt") {
+    return new TextDecoder().decode(bytes).slice(0, 40000);
+  } else {
+    throw new Error(`不支持的文件格式: ${ext}`);
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,10 +36,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { resumeText, jobTitle, company, jobDescription } = await req.json();
+    const { fileBase64, fileName, jobTitle, company, jobDescription } = await req.json();
 
-    if (!resumeText || !jobTitle) {
-      return new Response(JSON.stringify({ error: "resumeText and jobTitle are required" }), {
+    if (!fileBase64 || !fileName || !jobTitle) {
+      return new Response(JSON.stringify({ error: "fileBase64, fileName and jobTitle are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Extracting text from: ${fileName}`);
+    const resumeText = await extractResumeText(fileBase64, fileName);
+    console.log(`Extracted ${resumeText.length} characters`);
+
+    if (!resumeText || resumeText.trim().length < 10) {
+      return new Response(JSON.stringify({ error: "无法从文件中提取文本内容，请确认文件格式正确" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -29,7 +63,7 @@ ${company ? `目标公司：${company}` : ""}
 ${jobDescription ? `职位描述：${jobDescription}` : ""}
 
 简历内容：
-${resumeText.substring(0, 8000)}
+${resumeText}
 
 请严格按以下JSON格式返回分析结果（不要包含其他文字）：
 {
@@ -59,7 +93,7 @@ ${resumeText.substring(0, 8000)}
       });
     }
 
-    const aiResponse = await fetch(OPENAI_API_URL, {
+    const aiResponse = await fetch(AI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -91,6 +125,7 @@ ${resumeText.substring(0, 8000)}
     try {
       result = JSON.parse(resultText);
     } catch {
+      console.error("Failed to parse AI response:", resultText);
       return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -102,7 +137,7 @@ ${resumeText.substring(0, 8000)}
     });
   } catch (err) {
     console.error("Error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    return new Response(JSON.stringify({ error: err.message || "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
