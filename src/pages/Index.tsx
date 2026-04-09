@@ -69,12 +69,9 @@ const Index = () => {
           <p className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80">
             上传您的简历，输入期望职位，AI 将智能分析匹配度并提供专业优化建议，让您的简历脱颖而出
           </p>
-          <div className="mt-10 flex justify-center gap-4">
+          <div className="mt-10">
             <Button size="lg" variant="secondary" asChild>
               <Link to="/workspace">开始优化简历</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
-              <Link to="/register">免费注册</Link>
             </Button>
           </div>
         </div>
@@ -195,7 +192,7 @@ const Index = () => {
         <div className="container text-center">
           <h2 className="text-3xl font-bold text-primary-foreground">准备好优化你的简历了吗？</h2>
           <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80">
-            加入数千名求职者，让 AI 帮你打造完美简历
+            让 AI 帮你打造完美简历
           </p>
           <Button size="lg" variant="secondary" className="mt-8" asChild>
             <Link to="/workspace">立即开始</Link>

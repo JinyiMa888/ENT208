@@ -1,18 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-
 import Navbar from "@/components/Navbar";
-import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, Brain, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { useEffect } from "react";
 
 interface AnalysisResult {
   matchScore: number;
@@ -22,20 +18,12 @@ interface AnalysisResult {
 }
 
 const Workspace = () => {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login");
-    }
-  }, [user, authLoading, navigate]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -56,19 +44,12 @@ const Workspace = () => {
     setResult(null);
 
     try {
-      // Upload file to storage
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${user!.id}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("resumes")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
+      // Read file as text for analysis
+      const resumeText = await file.text();
 
       // Call edge function for AI analysis
       const { data, error } = await supabase.functions.invoke("analyze-resume", {
-        body: { filePath, jobTitle, company, jobDescription },
+        body: { resumeText, jobTitle, company, jobDescription },
       });
 
       if (error) throw error;
@@ -81,14 +62,6 @@ const Workspace = () => {
       setAnalyzing(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
@@ -115,13 +88,13 @@ const Workspace = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
-                  <input type="file" accept=".pdf,.docx,.doc" onChange={handleFileChange} className="hidden" id="resume-upload" />
+                  <input type="file" accept=".pdf,.docx,.doc,.txt" onChange={handleFileChange} className="hidden" id="resume-upload" />
                   <label htmlFor="resume-upload" className="cursor-pointer">
                     <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
                     <p className="mt-2 text-sm font-medium">
                       {file ? file.name : "点击上传简历文件"}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">支持 PDF、DOCX 格式，最大 10MB</p>
+                    <p className="mt-1 text-xs text-muted-foreground">支持 PDF、DOCX、TXT 格式，最大 10MB</p>
                   </label>
                 </div>
               </CardContent>

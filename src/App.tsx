@@ -5,8 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Workspace from "./pages/Workspace";
 import HistoryPage from "./pages/HistoryPage";
 import NotFound from "./pages/NotFound";
@@ -22,8 +20,6 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
             <Route path="/workspace" element={<Workspace />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="*" element={<NotFound />} />
