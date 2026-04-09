@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import {
-  FileText, Upload, Brain, CheckCircle, Star,
+  Upload, Brain, CheckCircle, Star,
   Building2, Briefcase, GraduationCap, Code, TrendingUp, Users
 } from "lucide-react";
 
