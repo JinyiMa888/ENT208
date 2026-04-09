@@ -1,5 +1,4 @@
 import { extractText } from "https://esm.sh/unpdf@0.12.1";
-import * as mammoth from "https://esm.sh/mammoth@1.8.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +6,36 @@ const corsHeaders = {
 };
 
 const AI_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+// Simple DOCX text extraction without external library
+// DOCX is a ZIP file containing XML; we extract text from word/document.xml
+async function extractDocxText(bytes: Uint8Array): Promise<string> {
+  // Use DecompressionStream to unzip
+  // DOCX files are ZIP archives. We'll find document.xml and extract text from XML tags
+  const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
+  
+  const zip = await JSZip.loadAsync(bytes);
+  const docXml = await zip.file("word/document.xml")?.async("string");
+  
+  if (!docXml) {
+    throw new Error("Invalid DOCX file: missing word/document.xml");
+  }
+  
+  // Extract text content from XML by removing all tags
+  const text = docXml
+    .replace(/<w:br[^>]*\/>/g, "\n")  // line breaks
+    .replace(/<\/w:p>/g, "\n")         // paragraph breaks
+    .replace(/<[^>]+>/g, "")           // remove all XML tags
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")        // collapse multiple newlines
+    .trim();
+  
+  return text;
+}
 
 async function extractResumeText(fileBase64: string, fileName: string): Promise<string> {
   const binaryString = atob(fileBase64);
@@ -21,8 +50,8 @@ async function extractResumeText(fileBase64: string, fileName: string): Promise<
     const { text } = await extractText(bytes, { mergePages: true });
     return text.slice(0, 40000);
   } else if (ext === "docx" || ext === "doc") {
-    const result = await mammoth.extractRawText({ arrayBuffer: bytes.buffer });
-    return result.value.slice(0, 40000);
+    const text = await extractDocxText(bytes);
+    return text.slice(0, 40000);
   } else if (ext === "txt") {
     return new TextDecoder().decode(bytes).slice(0, 40000);
   } else {
@@ -100,7 +129,7 @@ ${resumeText}
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: "你是专业简历优化顾问。请只返回JSON格式的分析结果。" },
           { role: "user", content: prompt },
@@ -112,6 +141,20 @@ ${resumeText}
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI API error:", errText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "请求过于频繁，请稍后重试" }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "AI 额度不足，请充值后重试" }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       return new Response(JSON.stringify({ error: "AI analysis failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
