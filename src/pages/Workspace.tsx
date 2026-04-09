@@ -44,12 +44,19 @@ const Workspace = () => {
     setResult(null);
 
     try {
-      // Read file as text for analysis
-      const resumeText = await file.text();
+      // Convert file to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const fileBase64 = btoa(binary);
+      const fileName = file.name;
 
       // Call edge function for AI analysis
       const { data, error } = await supabase.functions.invoke("analyze-resume", {
-        body: { resumeText, jobTitle, company, jobDescription },
+        body: { fileBase64, fileName, jobTitle, company, jobDescription },
       });
 
       if (error) throw error;
@@ -158,11 +165,8 @@ const Workspace = () => {
 
             {result && (
               <>
-                {/* Match Score */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>匹配度评分</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle>匹配度评分</CardTitle></CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-center">
                       <div className="relative flex h-40 w-40 items-center justify-center">
@@ -178,11 +182,8 @@ const Workspace = () => {
                   </CardContent>
                 </Card>
 
-                {/* Dimensions */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>维度分析</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle>维度分析</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                     {result.dimensions.map((d) => (
                       <div key={d.name}>
@@ -196,7 +197,6 @@ const Workspace = () => {
                   </CardContent>
                 </Card>
 
-                {/* Suggestions */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -216,12 +216,9 @@ const Workspace = () => {
                   </CardContent>
                 </Card>
 
-                {/* Optimized Content */}
                 {result.optimizedContent && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle>优化后简历内容</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle>优化后简历内容</CardTitle></CardHeader>
                     <CardContent>
                       <div className="whitespace-pre-wrap rounded-lg bg-muted p-4 text-sm">
                         {result.optimizedContent}
