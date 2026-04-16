@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
-import { Rocket, Briefcase, FileSearch, PenTool, MessageSquare, BarChart3, ArrowRight, CheckCircle, Sparkles } from "lucide-react";
+import { Briefcase, FileSearch, PenTool, MessageSquare, ArrowRight, CheckCircle, Sparkles } from "lucide-react";
 
 const features = [
   {
