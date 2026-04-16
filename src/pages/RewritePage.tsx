@@ -12,7 +12,8 @@ import ResumeUploader from "@/components/ResumeUploader";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PenTool, Loader2, ArrowRight, TrendingUp, Download, Lightbulb } from "lucide-react";
+import { PenTool, Loader2, ArrowRight, TrendingUp, Download, Lightbulb, FileText, FileType } from "lucide-react";
+import { exportToWord, exportToPDF } from "@/lib/resumeExport";
 
 interface RewriteResult {
   rewrittenContent: string;
