@@ -171,6 +171,30 @@ const InterviewPage = () => {
     setMockPhase("listening");
   }, []);
 
+  const generateReport = useCallback(async (history: QARecord[]) => {
+    setReportLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("interview-coach", {
+        body: {
+          action: "generate_report",
+          jobTitle, company, resumeText,
+          conversationHistory: history.map(qa => ({
+            question: qa.question,
+            answer: qa.answer,
+            score: qa.score,
+            feedback: qa.feedback,
+          })),
+        },
+      });
+      if (error) throw error;
+      setInterviewReport(data);
+    } catch (err: any) {
+      toast.error("报告生成失败：" + (err.message || "未知错误"));
+    } finally {
+      setReportLoading(false);
+    }
+  }, [jobTitle, company, resumeText]);
+
   const stopListeningAndSubmit = useCallback(async () => {
     recognitionRef.current?.stop();
     recognitionRef.current = null;
@@ -276,7 +300,8 @@ const InterviewPage = () => {
       });
       if (error) throw error;
 
-      setQaHistory([...qaHistory, { question: currentQuestion, answer: "（跳过）" }]);
+      const updatedHistory = [...qaHistory, { question: currentQuestion, answer: "（跳过）" }];
+      setQaHistory(updatedHistory);
       setQuestionIndex(prev => prev + 1);
 
       const nextQ = data.response || data.nextQuestion;
@@ -286,12 +311,13 @@ const InterviewPage = () => {
         await speakText(nextQ);
       } else {
         setMockPhase("done");
+        generateReport(updatedHistory);
       }
     } catch (err: any) {
       toast.error(err.message || "跳过失败");
       setMockPhase("asking");
     }
-  }, [qaHistory, currentQuestion, jobTitle, company, resumeText, speakText]);
+  }, [qaHistory, currentQuestion, jobTitle, company, resumeText, speakText, generateReport]);
 
   const resetMockInterview = useCallback(() => {
     recognitionRef.current?.abort();
@@ -304,30 +330,6 @@ const InterviewPage = () => {
     setMicError("");
     setInterviewReport(null);
   }, []);
-
-  const generateReport = useCallback(async (history: QARecord[]) => {
-    setReportLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("interview-coach", {
-        body: {
-          action: "generate_report",
-          jobTitle, company, resumeText,
-          conversationHistory: history.map(qa => ({
-            question: qa.question,
-            answer: qa.answer,
-            score: qa.score,
-            feedback: qa.feedback,
-          })),
-        },
-      });
-      if (error) throw error;
-      setInterviewReport(data);
-    } catch (err: any) {
-      toast.error("报告生成失败：" + (err.message || "未知错误"));
-    } finally {
-      setReportLoading(false);
-    }
-  }, [jobTitle, company, resumeText]);
 
   /* ── Questions generation & evaluation ── */
   const generateQuestions = async () => {
