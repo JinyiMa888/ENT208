@@ -42,6 +42,7 @@ const InterviewPage = () => {
   const [weaknessQuestions, setWeaknessQuestions] = useState<Question[]>([]);
   const [commonQuestions, setCommonQuestions] = useState<Question[]>([]);
   const [expandedQ, setExpandedQ] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("questions");
 
   const [selectedQuestion, setSelectedQuestion] = useState("");
   const [userAnswer, setUserAnswer] = useState("");
