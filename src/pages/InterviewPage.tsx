@@ -226,7 +226,7 @@ const InterviewPage = () => {
       toast.error(err.message || "处理回答失败");
       setMockPhase("asking");
     }
-  }, [qaHistory, currentQuestion, currentTranscript, jobTitle, company, resumeText, speakText]);
+  }, [qaHistory, currentQuestion, currentTranscript, jobTitle, company, resumeText, speakText, generateReport]);
 
   /* ── Mock interview flow ── */
   const startMockInterview = useCallback(async () => {
