@@ -11,7 +11,7 @@ import ResumeUploader from "@/components/ResumeUploader";
 import { supabase } from "@/integrations/supabase/client";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { toast } from "sonner";
-import { Building2, MapPin, Banknote, Search, CheckCircle, AlertTriangle, XCircle, Loader2, Briefcase, GraduationCap, Users, Clock, ArrowRight } from "lucide-react";
+import { Building2, MapPin, Banknote, Search, CheckCircle, AlertTriangle, XCircle, Loader2, GraduationCap, Users, Clock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface JobListing {
