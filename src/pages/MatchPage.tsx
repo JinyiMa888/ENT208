@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
+import WorkflowSteps from "@/components/WorkflowSteps";
 import ResumeUploader from "@/components/ResumeUploader";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileSearch, Loader2, CheckCircle, AlertTriangle, XCircle, Target } from "lucide-react";
+import { FileSearch, Loader2, CheckCircle, AlertTriangle, XCircle, Target, ArrowRight } from "lucide-react";
 
 interface MatchResult {
   overallScore: number;
@@ -23,6 +24,7 @@ interface MatchResult {
 
 const MatchPage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const jobId = searchParams.get("jobId");
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
@@ -31,9 +33,7 @@ const MatchPage = () => {
   const [result, setResult] = useState<MatchResult | null>(null);
   const { resumeText } = useResumeStore();
 
-  useEffect(() => {
-    if (jobId) loadJob(jobId);
-  }, [jobId]);
+  useEffect(() => { if (jobId) loadJob(jobId); }, [jobId]);
 
   const loadJob = async (id: string) => {
     const { data } = await supabase.from("job_listings").select("*").eq("id", id).single();
@@ -47,7 +47,6 @@ const MatchPage = () => {
   const handleAnalyze = async () => {
     if (!resumeText) { toast.error("请先上传简历"); return; }
     if (!jobDescription) { toast.error("请输入岗位描述"); return; }
-
     setAnalyzing(true);
     setResult(null);
     try {
@@ -82,15 +81,21 @@ const MatchPage = () => {
     return <Badge variant="outline" className="text-xs">低</Badge>;
   };
 
+  const goToRewrite = () => {
+    const params = new URLSearchParams();
+    if (jobId) params.set("jobId", jobId);
+    navigate(`/rewrite?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container py-8">
+        <WorkflowSteps />
         <h1 className="text-3xl font-bold">简历-岗位匹配分析</h1>
         <p className="mt-2 text-muted-foreground">逐句对比简历与岗位要求，三色标注匹配情况</p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[350px_1fr]">
-          {/* Input */}
           <div className="space-y-4">
             <ResumeUploader />
             <Card>
@@ -106,7 +111,6 @@ const MatchPage = () => {
             </Card>
           </div>
 
-          {/* Results */}
           <div className="space-y-4">
             {!result && !analyzing && (
               <Card className="flex min-h-[400px] items-center justify-center">
@@ -129,7 +133,6 @@ const MatchPage = () => {
 
             {result && (
               <>
-                {/* Overall Score */}
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center gap-8">
@@ -155,18 +158,21 @@ const MatchPage = () => {
                   </CardContent>
                 </Card>
 
-                {/* Keywords */}
                 <Card>
                   <CardHeader><CardTitle className="text-base">关键词分析</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div>
-                      <p className="mb-1.5 text-xs font-medium text-green-600">✅ 已匹配</p>
+                      <p className="mb-1.5 text-xs font-medium text-green-600 flex items-center gap-1">
+                        <CheckCircle className="h-3.5 w-3.5" /> 已匹配
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {result.keywords.matched.map(k => <Badge key={k} className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{k}</Badge>)}
                       </div>
                     </div>
                     <div>
-                      <p className="mb-1.5 text-xs font-medium text-red-600">❌ 缺失</p>
+                      <p className="mb-1.5 text-xs font-medium text-red-600 flex items-center gap-1">
+                        <XCircle className="h-3.5 w-3.5" /> 缺失
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {result.keywords.missing.map(k => <Badge key={k} variant="destructive" className="text-xs">{k}</Badge>)}
                       </div>
@@ -174,7 +180,6 @@ const MatchPage = () => {
                   </CardContent>
                 </Card>
 
-                {/* Sentence Analysis */}
                 <Card>
                   <CardHeader><CardTitle className="text-base">逐句匹配分析</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
@@ -193,7 +198,6 @@ const MatchPage = () => {
                   </CardContent>
                 </Card>
 
-                {/* Missing Items */}
                 {result.missingItems.length > 0 && (
                   <Card>
                     <CardHeader><CardTitle className="text-base">缺失项与建议</CardTitle></CardHeader>
@@ -204,12 +208,27 @@ const MatchPage = () => {
                             {importanceBadge(m.importance)}
                             <span className="text-sm font-medium">{m.requirement}</span>
                           </div>
-                          <p className="mt-1.5 text-xs text-muted-foreground">💡 {m.suggestion}</p>
+                          <p className="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                            <Loader2 className="h-3 w-3" /> {m.suggestion}
+                          </p>
                         </div>
                       ))}
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Next step CTA */}
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="font-medium">下一步：针对性改写简历</p>
+                      <p className="text-sm text-muted-foreground">根据匹配分析结果，AI 自动优化你的简历</p>
+                    </div>
+                    <Button onClick={goToRewrite}>
+                      简历改写 <ArrowRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>

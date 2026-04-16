@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/Navbar";
+import WorkflowSteps from "@/components/WorkflowSteps";
 import ResumeUploader from "@/components/ResumeUploader";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PenTool, Loader2, ArrowRight, TrendingUp, Download } from "lucide-react";
+import { PenTool, Loader2, ArrowRight, TrendingUp, Download, Lightbulb } from "lucide-react";
 
 interface RewriteResult {
   rewrittenContent: string;
@@ -29,6 +30,7 @@ const styles = [
 
 const RewritePage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const jobId = searchParams.get("jobId");
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
@@ -38,9 +40,7 @@ const RewritePage = () => {
   const [result, setResult] = useState<RewriteResult | null>(null);
   const { resumeText } = useResumeStore();
 
-  useEffect(() => {
-    if (jobId) loadJob(jobId);
-  }, [jobId]);
+  useEffect(() => { if (jobId) loadJob(jobId); }, [jobId]);
 
   const loadJob = async (id: string) => {
     const { data } = await supabase.from("job_listings").select("*").eq("id", id).single();
@@ -54,7 +54,6 @@ const RewritePage = () => {
   const handleRewrite = async () => {
     if (!resumeText) { toast.error("请先上传简历"); return; }
     if (!jobTitle) { toast.error("请输入目标职位"); return; }
-
     setRewriting(true);
     setResult(null);
     try {
@@ -93,10 +92,18 @@ const RewritePage = () => {
     return <Badge variant={info.variant} className="text-xs">{info.label}</Badge>;
   };
 
+  const goToInterview = () => {
+    const params = new URLSearchParams();
+    if (jobTitle) params.set("jobTitle", jobTitle);
+    if (company) params.set("company", company);
+    navigate(`/interview?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container py-8">
+        <WorkflowSteps />
         <h1 className="text-3xl font-bold">智能简历改写</h1>
         <p className="mt-2 text-muted-foreground">3种风格一键生成针对岗位的专属简历</p>
 
@@ -156,11 +163,9 @@ const RewritePage = () => {
                       <TrendingUp className="h-5 w-5 text-green-500" />
                       <span className="font-medium">预计匹配分提升 +{result.estimatedScoreImprovement}%</span>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={downloadText}>
-                        <Download className="mr-1.5 h-4 w-4" />导出TXT
-                      </Button>
-                    </div>
+                    <Button size="sm" variant="outline" onClick={downloadText}>
+                      <Download className="mr-1.5 h-4 w-4" />导出TXT
+                    </Button>
                   </CardContent>
                 </Card>
 
@@ -197,7 +202,9 @@ const RewritePage = () => {
                               {c.rewritten}
                             </div>
                           </div>
-                          <p className="mt-2 text-xs text-muted-foreground">💡 {c.reason}</p>
+                          <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                            <Lightbulb className="h-3 w-3" /> {c.reason}
+                          </p>
                         </CardContent>
                       </Card>
                     ))}
@@ -216,7 +223,7 @@ const RewritePage = () => {
                       <CardContent className="space-y-3 p-6">
                         {result.tips.map((t, i) => (
                           <div key={i} className="flex gap-3 rounded-lg bg-accent p-3 text-sm">
-                            <span className="flex-shrink-0">💡</span>
+                            <Lightbulb className="h-4 w-4 flex-shrink-0 text-primary mt-0.5" />
                             <span>{t}</span>
                           </div>
                         ))}
@@ -224,6 +231,19 @@ const RewritePage = () => {
                     </Card>
                   </TabsContent>
                 </Tabs>
+
+                {/* Next step CTA */}
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="font-medium">下一步：模拟面试准备</p>
+                      <p className="text-sm text-muted-foreground">用语音和 AI 面试官练习，为面试做好准备</p>
+                    </div>
+                    <Button onClick={goToInterview}>
+                      面试辅导 <ArrowRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>

@@ -8,7 +8,7 @@ const features = [
   {
     icon: Briefcase,
     title: "岗位智能推荐",
-    desc: "上传简历，AI 自动匹配最适合你的岗位，展示匹配理由（✅⚠️❌）",
+    desc: "上传简历，AI 自动匹配最适合你的岗位，展示匹配理由与差距分析",
     link: "/jobs",
     iconBg: "bg-accent",
   },
@@ -29,12 +29,11 @@ const features = [
   {
     icon: MessageSquare,
     title: "面试智能辅导",
-    desc: "AI 预测面试问题，STAR框架回答建议，模拟面试实时评分",
+    desc: "AI 预测面试问题，STAR框架回答建议，语音模拟面试实时评分",
     link: "/interview",
     iconBg: "bg-accent",
   },
 ];
-
 
 const Index = () => {
   return (
@@ -79,7 +78,6 @@ const Index = () => {
           </p>
 
           <div className="mx-auto mt-14 max-w-3xl space-y-6">
-            {/* Row 1: steps 1 and 2 */}
             <div className="grid grid-cols-2 gap-8">
               <div className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">1</div>
@@ -92,7 +90,6 @@ const Index = () => {
                 <p className="mt-1 text-sm text-muted-foreground">AI 匹配最适合的岗位</p>
               </div>
             </div>
-            {/* Row 2: steps 3 and 4 */}
             <div className="grid grid-cols-2 gap-8">
               <div className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">3</div>
@@ -105,12 +102,11 @@ const Index = () => {
                 <p className="mt-1 text-sm text-muted-foreground">一键生成专属优化简历</p>
               </div>
             </div>
-            {/* Row 3: step 5 centered */}
             <div className="flex justify-center">
               <div className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border w-full max-w-xs">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">5</div>
                 <h3 className="mt-4 text-lg font-semibold">模拟面试</h3>
-                <p className="mt-1 text-sm text-muted-foreground">AI 面试官帮你练到完美</p>
+                <p className="mt-1 text-sm text-muted-foreground">AI 面试官语音对话练到完美</p>
               </div>
             </div>
           </div>
@@ -156,7 +152,7 @@ const Index = () => {
               "逐句三色标注，一眼看清匹配差距",
               "3 种改写风格，一键生成专属简历",
               "AI 预测面试题，基于简历薄弱项",
-              "模拟面试实时评分，STAR 框架指导",
+              "语音模拟面试，还原真实面试场景",
               "数据看板追踪进度，越用越精准",
             ].map((text, i) => (
               <div key={i} className="flex items-start gap-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-md">
