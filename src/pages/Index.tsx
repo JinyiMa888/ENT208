@@ -54,7 +54,7 @@ const Index = () => {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             智能求职，
           </h1>
-          <h1 className="mt-2 bg-gradient-to-r from-primary via-slate-500 to-slate-400 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl">
+          <h1 className="mt-2 bg-gradient-to-r from-primary via-emerald-600 to-teal-500 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl">
             不止一份简历。
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
