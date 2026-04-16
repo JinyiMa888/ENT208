@@ -100,8 +100,45 @@ ${answer ? `候选人最新回答：${answer}` : "请开始面试"}
   "interviewProgress": "beginning/middle/ending",
   "questionNumber": 1
 }`;
+    } else if (action === "generate_report") {
+      systemPrompt = "你是资深面试评估专家。请根据面试记录生成全面的面试表现报告。只返回JSON格式结果。";
+      prompt = `请根据以下模拟面试记录，生成一份完整的面试表现报告。
+
+目标岗位：${jobTitle}
+${company ? `目标公司：${company}` : ""}
+${resumeText ? `候选人简历摘要：${resumeText.slice(0, 1500)}` : ""}
+
+面试问答记录：
+${JSON.stringify(conversationHistory)}
+
+请严格按以下JSON格式返回：
+{
+  "overallScore": 75,
+  "overallComment": "对候选人整体面试表现的综合评价（3-4句话）",
+  "dimensions": {
+    "professionalKnowledge": {"score": 80, "comment": "专业知识掌握情况评价"},
+    "communication": {"score": 70, "comment": "沟通表达能力评价"},
+    "logicalThinking": {"score": 75, "comment": "逻辑思维能力评价"},
+    "stressHandling": {"score": 65, "comment": "抗压与应变能力评价"},
+    "jobFit": {"score": 80, "comment": "岗位匹配度评价"}
+  },
+  "strengths": ["亮点1", "亮点2", "亮点3"],
+  "weaknesses": ["不足1", "不足2", "不足3"],
+  "questionReports": [
+    {
+      "question": "面试问题",
+      "userAnswer": "用户的回答",
+      "score": 70,
+      "analysis": "对回答的详细分析",
+      "suggestedAnswer": "建议的优质回答（完整版，200字以上）",
+      "improvementTips": ["改进建议1", "改进建议2"]
+    }
+  ],
+  "overallSuggestions": ["整体改进建议1", "整体改进建议2", "整体改进建议3"],
+  "nextSteps": ["下一步行动建议1", "下一步行动建议2"]
+}`;
     } else {
-      return new Response(JSON.stringify({ error: "Invalid action. Use: generate_questions, evaluate_answer, mock_interview" }), {
+      return new Response(JSON.stringify({ error: "Invalid action. Use: generate_questions, evaluate_answer, mock_interview, generate_report" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

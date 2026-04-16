@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import {
   Loader2, Star, Brain, Target, ChevronDown, ChevronUp,
   Mic, MicOff, Volume2, Lightbulb, CheckCircle, AlertTriangle,
-  StopCircle, SkipForward, RotateCcw
+  StopCircle, SkipForward, RotateCcw, FileText, TrendingUp,
+  Award
 } from "lucide-react";
 
 /* ── Types ── */
@@ -64,6 +65,9 @@ const InterviewPage = () => {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [mockLoading, setMockLoading] = useState(false);
   const [micError, setMicError] = useState("");
+  const [interviewReport, setInterviewReport] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [expandedReport, setExpandedReport] = useState<number | null>(null);
 
   // Refs
   const recognitionRef = useRef<any>(null);
@@ -167,6 +171,30 @@ const InterviewPage = () => {
     setMockPhase("listening");
   }, []);
 
+  const generateReport = useCallback(async (history: QARecord[]) => {
+    setReportLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("interview-coach", {
+        body: {
+          action: "generate_report",
+          jobTitle, company, resumeText,
+          conversationHistory: history.map(qa => ({
+            question: qa.question,
+            answer: qa.answer,
+            score: qa.score,
+            feedback: qa.feedback,
+          })),
+        },
+      });
+      if (error) throw error;
+      setInterviewReport(data);
+    } catch (err: any) {
+      toast.error("报告生成失败：" + (err.message || "未知错误"));
+    } finally {
+      setReportLoading(false);
+    }
+  }, [jobTitle, company, resumeText]);
+
   const stopListeningAndSubmit = useCallback(async () => {
     recognitionRef.current?.stop();
     recognitionRef.current = null;
@@ -215,13 +243,14 @@ const InterviewPage = () => {
       } else {
         setCurrentQuestion("");
         setMockPhase("done");
-        toast.success("模拟面试结束！");
+        toast.success("模拟面试结束，正在生成面试报告...");
+        generateReport(updatedHistory);
       }
     } catch (err: any) {
       toast.error(err.message || "处理回答失败");
       setMockPhase("asking");
     }
-  }, [qaHistory, currentQuestion, currentTranscript, jobTitle, company, resumeText, speakText]);
+  }, [qaHistory, currentQuestion, currentTranscript, jobTitle, company, resumeText, speakText, generateReport]);
 
   /* ── Mock interview flow ── */
   const startMockInterview = useCallback(async () => {
@@ -271,7 +300,8 @@ const InterviewPage = () => {
       });
       if (error) throw error;
 
-      setQaHistory([...qaHistory, { question: currentQuestion, answer: "（跳过）" }]);
+      const updatedHistory = [...qaHistory, { question: currentQuestion, answer: "（跳过）" }];
+      setQaHistory(updatedHistory);
       setQuestionIndex(prev => prev + 1);
 
       const nextQ = data.response || data.nextQuestion;
@@ -281,12 +311,13 @@ const InterviewPage = () => {
         await speakText(nextQ);
       } else {
         setMockPhase("done");
+        generateReport(updatedHistory);
       }
     } catch (err: any) {
       toast.error(err.message || "跳过失败");
       setMockPhase("asking");
     }
-  }, [qaHistory, currentQuestion, jobTitle, company, resumeText, speakText]);
+  }, [qaHistory, currentQuestion, jobTitle, company, resumeText, speakText, generateReport]);
 
   const resetMockInterview = useCallback(() => {
     recognitionRef.current?.abort();
@@ -297,6 +328,7 @@ const InterviewPage = () => {
     setQaHistory([]);
     setQuestionIndex(0);
     setMicError("");
+    setInterviewReport(null);
   }, []);
 
   /* ── Questions generation & evaluation ── */
@@ -523,34 +555,180 @@ const InterviewPage = () => {
                   </div>
                 </Card>
               ) : mockPhase === "done" ? (
-                /* ── Interview Summary ── */
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>面试总结</span>
-                      <Badge variant="outline" className="text-lg px-3 py-1">{avgScore} 分</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {qaHistory.map((qa, i) => (
-                      <div key={i} className="rounded-lg border p-4 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium">Q{i + 1}: {qa.question}</p>
-                          {qa.score !== undefined && (
-                            <Badge variant={qa.score >= 70 ? "default" : "secondary"} className="shrink-0">
-                              {qa.score}分
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">A: {qa.answer}</p>
-                        {qa.feedback && <p className="text-xs text-muted-foreground italic">💡 {qa.feedback}</p>}
+                /* ── Interview Report ── */
+                <div className="space-y-6">
+                  {reportLoading && !interviewReport ? (
+                    <Card className="flex min-h-[300px] items-center justify-center">
+                      <div className="text-center space-y-3">
+                        <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">正在生成面试表现报告...</p>
                       </div>
-                    ))}
-                    <Button variant="outline" className="w-full" onClick={resetMockInterview}>
-                      <RotateCcw className="mr-2 h-4 w-4" /> 重新开始
-                    </Button>
-                  </CardContent>
-                </Card>
+                    </Card>
+                  ) : interviewReport ? (
+                    <>
+                      {/* Overall Score Card */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /> 面试表现报告</span>
+                            <div className="text-right">
+                              <span className="text-3xl font-bold">{interviewReport.overallScore}</span>
+                              <span className="text-sm text-muted-foreground"> / 100</span>
+                            </div>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <p className="text-sm leading-relaxed">{interviewReport.overallComment}</p>
+
+                          {/* Dimension scores */}
+                          {interviewReport.dimensions && (
+                            <div className="grid gap-3">
+                              {Object.entries(interviewReport.dimensions).map(([key, val]: [string, any]) => {
+                                const labels: Record<string, string> = {
+                                  professionalKnowledge: "专业知识",
+                                  communication: "沟通表达",
+                                  logicalThinking: "逻辑思维",
+                                  stressHandling: "抗压应变",
+                                  jobFit: "岗位匹配",
+                                };
+                                return (
+                                  <div key={key}>
+                                    <div className="mb-1 flex justify-between text-sm">
+                                      <span className="font-medium">{labels[key] || key}</span>
+                                      <span>{val.score}分</span>
+                                    </div>
+                                    <Progress value={val.score} className="h-2" />
+                                    <p className="mt-1 text-xs text-muted-foreground">{val.comment}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Strengths & Weaknesses */}
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            {interviewReport.strengths?.length > 0 && (
+                              <div className="rounded-lg bg-primary/5 p-4">
+                                <p className="text-sm font-semibold flex items-center gap-1 mb-2"><CheckCircle className="h-4 w-4 text-primary" /> 面试亮点</p>
+                                {interviewReport.strengths.map((s: string, i: number) => (
+                                  <p key={i} className="text-xs text-muted-foreground mb-1">• {s}</p>
+                                ))}
+                              </div>
+                            )}
+                            {interviewReport.weaknesses?.length > 0 && (
+                              <div className="rounded-lg bg-destructive/5 p-4">
+                                <p className="text-sm font-semibold flex items-center gap-1 mb-2"><AlertTriangle className="h-4 w-4 text-destructive" /> 待改进</p>
+                                {interviewReport.weaknesses.map((s: string, i: number) => (
+                                  <p key={i} className="text-xs text-muted-foreground mb-1">• {s}</p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Per-question Reports */}
+                      {interviewReport.questionReports?.map((qr: any, i: number) => (
+                        <Card key={i}>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-start justify-between gap-2">
+                              <span>Q{i + 1}: {qr.question}</span>
+                              <Badge variant={qr.score >= 70 ? "default" : "secondary"} className="shrink-0">{qr.score}分</Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">你的回答</p>
+                              <p className="text-sm rounded-lg bg-muted p-3">{qr.userAnswer}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">评析</p>
+                              <p className="text-sm">{qr.analysis}</p>
+                            </div>
+                            {expandedReport === i ? (
+                              <>
+                                <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
+                                  <p className="text-xs font-semibold mb-2 flex items-center gap-1"><Lightbulb className="h-3.5 w-3.5 text-primary" /> 建议回答</p>
+                                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{qr.suggestedAnswer}</p>
+                                </div>
+                                {qr.improvementTips?.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold mb-1">改进建议</p>
+                                    {qr.improvementTips.map((tip: string, j: number) => (
+                                      <p key={j} className="text-xs text-muted-foreground mb-1">• {tip}</p>
+                                    ))}
+                                  </div>
+                                )}
+                                <Button size="sm" variant="ghost" onClick={() => setExpandedReport(null)}>
+                                  <ChevronUp className="mr-1 h-3.5 w-3.5" /> 收起
+                                </Button>
+                              </>
+                            ) : (
+                              <Button size="sm" variant="outline" onClick={() => setExpandedReport(i)}>
+                                <ChevronDown className="mr-1 h-3.5 w-3.5" /> 查看建议回答与改进
+                              </Button>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+
+                      {/* Overall Suggestions & Next Steps */}
+                      <Card>
+                        <CardContent className="pt-6 space-y-4">
+                          {interviewReport.overallSuggestions?.length > 0 && (
+                            <div>
+                              <p className="text-sm font-semibold flex items-center gap-1 mb-2"><TrendingUp className="h-4 w-4 text-primary" /> 整体改进建议</p>
+                              {interviewReport.overallSuggestions.map((s: string, i: number) => (
+                                <p key={i} className="text-sm text-muted-foreground mb-1">{i + 1}. {s}</p>
+                              ))}
+                            </div>
+                          )}
+                          {interviewReport.nextSteps?.length > 0 && (
+                            <div>
+                              <p className="text-sm font-semibold flex items-center gap-1 mb-2"><Award className="h-4 w-4 text-primary" /> 下一步行动</p>
+                              {interviewReport.nextSteps.map((s: string, i: number) => (
+                                <p key={i} className="text-sm text-muted-foreground mb-1">{i + 1}. {s}</p>
+                              ))}
+                            </div>
+                          )}
+                          <Button variant="outline" className="w-full" onClick={resetMockInterview}>
+                            <RotateCcw className="mr-2 h-4 w-4" /> 重新开始
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    /* Fallback: basic summary if report failed */
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          <span>面试总结</span>
+                          <Badge variant="outline" className="text-lg px-3 py-1">{avgScore} 分</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {qaHistory.map((qa, i) => (
+                          <div key={i} className="rounded-lg border p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-medium">Q{i + 1}: {qa.question}</p>
+                              {qa.score !== undefined && (
+                                <Badge variant={qa.score >= 70 ? "default" : "secondary"} className="shrink-0">{qa.score}分</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">A: {qa.answer}</p>
+                            {qa.feedback && <p className="text-xs text-muted-foreground italic">{qa.feedback}</p>}
+                          </div>
+                        ))}
+                        <Button variant="outline" className="w-full" onClick={() => generateReport(qaHistory)}>
+                          <FileText className="mr-2 h-4 w-4" /> 生成详细报告
+                        </Button>
+                        <Button variant="ghost" className="w-full" onClick={resetMockInterview}>
+                          <RotateCcw className="mr-2 h-4 w-4" /> 重新开始
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               ) : (
                 /* ── Active Interview ── */
                 <Card className="min-h-[500px] flex flex-col">
