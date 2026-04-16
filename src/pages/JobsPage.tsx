@@ -56,8 +56,9 @@ const JobsPage = () => {
     }
     if (industryFilter !== "all") result = result.filter(j => j.industry.includes(industryFilter));
     if (locationFilter !== "all") result = result.filter(j => j.location.includes(locationFilter));
+    if (jobTitleFilter !== "all") result = result.filter(j => j.job_title.includes(jobTitleFilter));
     setFilteredJobs(result);
-  }, [jobs, searchTerm, industryFilter, locationFilter]);
+  }, [jobs, searchTerm, industryFilter, locationFilter, jobTitleFilter]);
 
   const fetchJobs = async () => {
     const { data, error } = await supabase.from("job_listings").select("*");
