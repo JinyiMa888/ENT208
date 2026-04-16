@@ -41,7 +41,7 @@ const JobsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [industryFilter, setIndustryFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
-  const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
+  const [jobTitleFilter, setJobTitleFilter] = useState("all");
   const { resumeText } = useResumeStore();
   const navigate = useNavigate();
 
