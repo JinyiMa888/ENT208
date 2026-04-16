@@ -35,13 +35,6 @@ const features = [
   },
 ];
 
-const steps = [
-  { num: "1", title: "上传简历", desc: "支持 PDF、DOCX、TXT 格式" },
-  { num: "2", title: "智能推荐", desc: "AI 匹配最适合的岗位" },
-  { num: "3", title: "匹配分析", desc: "逐句对比简历与JD差距" },
-  { num: "4", title: "简历改写", desc: "一键生成专属优化简历" },
-  { num: "5", title: "模拟面试", desc: "AI 面试官帮你练到完美" },
-];
 
 const Index = () => {
   return (
