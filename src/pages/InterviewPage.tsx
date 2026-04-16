@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import {
   Loader2, Star, Brain, Target, ChevronDown, ChevronUp,
   Mic, MicOff, Volume2, Lightbulb, CheckCircle, AlertTriangle,
-  StopCircle, SkipForward, RotateCcw
+  StopCircle, SkipForward, RotateCcw, FileText, TrendingUp,
+  Award, MessageCircle, Zap, BookOpen
 } from "lucide-react";
 
 /* ── Types ── */
