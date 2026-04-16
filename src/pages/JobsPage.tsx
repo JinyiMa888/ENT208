@@ -167,6 +167,13 @@ const JobsPage = () => {
                     {locations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <Select value={jobTitleFilter} onValueChange={setJobTitleFilter}>
+                  <SelectTrigger><SelectValue placeholder="岗位类型" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部岗位</SelectItem>
+                    {jobTitleKeywords.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </CardContent>
             </Card>
           </div>
