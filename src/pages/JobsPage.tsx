@@ -41,6 +41,7 @@ const JobsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [industryFilter, setIndustryFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
+  const [jobTitleFilter, setJobTitleFilter] = useState("all");
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const { resumeText } = useResumeStore();
   const navigate = useNavigate();
@@ -55,8 +56,9 @@ const JobsPage = () => {
     }
     if (industryFilter !== "all") result = result.filter(j => j.industry.includes(industryFilter));
     if (locationFilter !== "all") result = result.filter(j => j.location.includes(locationFilter));
+    if (jobTitleFilter !== "all") result = result.filter(j => j.job_title.includes(jobTitleFilter));
     setFilteredJobs(result);
-  }, [jobs, searchTerm, industryFilter, locationFilter]);
+  }, [jobs, searchTerm, industryFilter, locationFilter, jobTitleFilter]);
 
   const fetchJobs = async () => {
     const { data, error } = await supabase.from("job_listings").select("*");
@@ -109,6 +111,17 @@ const JobsPage = () => {
   const industries = [...new Set(jobs.map(j => j.industry))];
   const locations = [...new Set(jobs.map(j => j.location))];
 
+  // Extract job title keywords for filter
+  const jobTitleKeywords = (() => {
+    const keywords = new Set<string>();
+    jobs.forEach(j => {
+      const title = j.job_title;
+      const patterns = ["专员", "经理", "主管", "总监", "工程师", "设计师", "分析师", "助理", "顾问", "架构师", "运营", "编辑", "秘书", "会计", "律师", "医生", "教师", "研究员"];
+      patterns.forEach(p => { if (title.includes(p)) keywords.add(p); });
+    });
+    return [...keywords].sort();
+  })();
+
   const jobTypeLabel = (t: string) => {
     const map: Record<string, string> = { "full-time": "全职", "part-time": "兼职", "contract": "合同", "intern": "实习" };
     return map[t] || t;
@@ -152,6 +165,13 @@ const JobsPage = () => {
                   <SelectContent>
                     <SelectItem value="all">全部地点</SelectItem>
                     {locations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={jobTitleFilter} onValueChange={setJobTitleFilter}>
+                  <SelectTrigger><SelectValue placeholder="岗位类型" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部岗位</SelectItem>
+                    {jobTitleKeywords.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </CardContent>
