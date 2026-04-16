@@ -12,7 +12,8 @@ import ResumeUploader from "@/components/ResumeUploader";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PenTool, Loader2, ArrowRight, TrendingUp, Download, Lightbulb } from "lucide-react";
+import { PenTool, Loader2, ArrowRight, TrendingUp, Download, Lightbulb, FileText, FileType } from "lucide-react";
+import { exportToWord, exportToPDF } from "@/lib/resumeExport";
 
 interface RewriteResult {
   rewrittenContent: string;
@@ -160,12 +161,20 @@ const RewritePage = () => {
                 <Card>
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
-                      <TrendingUp className="h-5 w-5 text-green-500" />
+                      <TrendingUp className="h-5 w-5 text-primary" />
                       <span className="font-medium">预计匹配分提升 +{result.estimatedScoreImprovement}%</span>
                     </div>
-                    <Button size="sm" variant="outline" onClick={downloadText}>
-                      <Download className="mr-1.5 h-4 w-4" />导出TXT
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={downloadText}>
+                        <Download className="mr-1.5 h-4 w-4" />TXT
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => exportToWord(result.rewrittenContent, jobTitle, selectedStyle)}>
+                        <FileText className="mr-1.5 h-4 w-4" />Word
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => exportToPDF(result.rewrittenContent, jobTitle, selectedStyle)}>
+                        <FileType className="mr-1.5 h-4 w-4" />PDF
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
