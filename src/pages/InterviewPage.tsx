@@ -55,7 +55,7 @@ const InterviewPage = () => {
 
   // Voice state
   const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [_isSpeaking, setIsSpeaking] = useState(false);
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
 
