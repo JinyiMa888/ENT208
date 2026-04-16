@@ -111,6 +111,17 @@ const JobsPage = () => {
   const industries = [...new Set(jobs.map(j => j.industry))];
   const locations = [...new Set(jobs.map(j => j.location))];
 
+  // Extract job title keywords for filter
+  const jobTitleKeywords = (() => {
+    const keywords = new Set<string>();
+    jobs.forEach(j => {
+      const title = j.job_title;
+      const patterns = ["专员", "经理", "主管", "总监", "工程师", "设计师", "分析师", "助理", "顾问", "架构师", "运营", "编辑", "秘书", "会计", "律师", "医生", "教师", "研究员"];
+      patterns.forEach(p => { if (title.includes(p)) keywords.add(p); });
+    });
+    return [...keywords].sort();
+  })();
+
   const jobTypeLabel = (t: string) => {
     const map: Record<string, string> = { "full-time": "全职", "part-time": "兼职", "contract": "合同", "intern": "实习" };
     return map[t] || t;
