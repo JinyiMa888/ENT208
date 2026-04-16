@@ -3,8 +3,12 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
+import JobsPage from "./pages/JobsPage";
+import MatchPage from "./pages/MatchPage";
+import RewritePage from "./pages/RewritePage";
+import InterviewPage from "./pages/InterviewPage";
+import DashboardPage from "./pages/DashboardPage";
 import Workspace from "./pages/Workspace";
 import HistoryPage from "./pages/HistoryPage";
 import NotFound from "./pages/NotFound";
@@ -17,14 +21,17 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/workspace" element={<Workspace />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/match" element={<MatchPage />} />
+          <Route path="/rewrite" element={<RewritePage />} />
+          <Route path="/interview" element={<InterviewPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/workspace" element={<Workspace />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
