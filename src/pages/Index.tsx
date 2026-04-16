@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
-import { Rocket, Briefcase, FileSearch, PenTool, MessageSquare, BarChart3, ArrowRight, CheckCircle } from "lucide-react";
+import { Rocket, Briefcase, FileSearch, PenTool, MessageSquare, BarChart3, ArrowRight, CheckCircle, Sparkles } from "lucide-react";
 
 const features = [
   {
@@ -10,36 +10,37 @@ const features = [
     title: "岗位智能推荐",
     desc: "上传简历，AI 自动匹配最适合你的岗位，展示匹配理由（✅⚠️❌）",
     link: "/jobs",
-    color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    color: "bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
   },
   {
     icon: FileSearch,
     title: "简历匹配分析",
     desc: "逐句对比简历与JD，三色标注匹配/部分匹配/缺失，量化评分",
     link: "/match",
-    color: "bg-green-500/10 text-green-600 dark:text-green-400",
+    color: "bg-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400",
   },
   {
     icon: PenTool,
     title: "智能简历改写",
     desc: "3种风格一键改写，补充关键词、优化表述，实时预览提升分数",
     link: "/rewrite",
-    color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    color: "bg-purple-100 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
   },
   {
     icon: MessageSquare,
     title: "面试智能辅导",
     desc: "AI 预测面试问题，STAR框架回答建议，模拟面试实时评分",
     link: "/interview",
-    color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    color: "bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400",
   },
 ];
 
 const steps = [
   { num: "1", title: "上传简历", desc: "支持 PDF、DOCX、TXT 格式" },
-  { num: "2", title: "设置偏好", desc: "告诉 AI 你的理想岗位和公司" },
-  { num: "3", title: "智能推荐", desc: "获取匹配岗位和优化建议" },
-  { num: "4", title: "模拟面试", desc: "AI 面试官帮你练到完美" },
+  { num: "2", title: "智能推荐", desc: "AI 匹配最适合的岗位" },
+  { num: "3", title: "匹配分析", desc: "逐句对比简历与JD差距" },
+  { num: "4", title: "简历改写", desc: "一键生成专属优化简历" },
+  { num: "5", title: "模拟面试", desc: "AI 面试官帮你练到完美" },
 ];
 
 const Index = () => {
@@ -47,32 +48,27 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-primary py-24">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: "radial-gradient(circle at 25% 50%, hsl(210 60% 60%) 0%, transparent 50%), radial-gradient(circle at 75% 50%, hsl(38 92% 50%) 0%, transparent 50%)"
-          }} />
-        </div>
+      {/* Hero - Clean minimal style */}
+      <section className="relative overflow-hidden py-28 md:py-36">
         <div className="container relative text-center">
-          <div className="mx-auto flex items-center justify-center gap-3">
-            <Rocket className="h-10 w-10 text-primary-foreground" />
-            <h1 className="text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl md:text-6xl">
-              MatchResume
-            </h1>
+          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm font-medium text-muted-foreground">
+            <Sparkles className="h-4 w-4 text-primary" />
+            你的 AI 求职伙伴
           </div>
-          <p className="mx-auto mt-4 text-xl font-medium text-primary-foreground/90">
-            一站式智能求职助手
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            智能求职，
+          </h1>
+          <h1 className="bg-gradient-to-r from-orange-400 via-rose-400 to-primary bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl lg:text-7xl">
+            不止一份简历。
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+            上传简历、告诉偏好，系统帮你找公司、改简历、练面试，从投递到 offer 全程辅助。
           </p>
-          <p className="mx-auto mt-3 max-w-2xl text-lg text-primary-foreground/70">
-            上传简历、告诉偏好，系统帮你找公司、改简历、练面试，从投递到 offer 全程辅助
-          </p>
-          <div className="mt-10 flex items-center justify-center gap-4">
-            <Button size="lg" variant="secondary" asChild>
-              <Link to="/jobs">开始智能推荐</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
-              <Link to="/match">简历匹配分析</Link>
+          <div className="mt-10">
+            <Button size="lg" className="h-14 rounded-full px-10 text-base font-semibold shadow-lg" asChild>
+              <Link to="/jobs">
+                立即开始 <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -85,15 +81,12 @@ const Index = () => {
           <p className="mx-auto mt-4 max-w-xl text-center text-muted-foreground">
             完整闭环，一站式搞定求职全流程
           </p>
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
             {steps.map((step, i) => (
               <div key={i} className="flex flex-col items-center text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
                   {step.num}
                 </div>
-                {i < steps.length - 1 && (
-                  <ArrowRight className="my-2 hidden h-5 w-5 rotate-90 text-muted-foreground lg:hidden sm:block" />
-                )}
                 <h3 className="mt-4 text-lg font-semibold">{step.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{step.desc}</p>
               </div>
