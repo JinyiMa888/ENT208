@@ -65,6 +65,9 @@ const InterviewPage = () => {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [mockLoading, setMockLoading] = useState(false);
   const [micError, setMicError] = useState("");
+  const [interviewReport, setInterviewReport] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [expandedReport, setExpandedReport] = useState<number | null>(null);
 
   // Refs
   const recognitionRef = useRef<any>(null);
