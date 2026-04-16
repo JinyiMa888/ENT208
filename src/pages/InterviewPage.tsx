@@ -301,7 +301,32 @@ const InterviewPage = () => {
     setQaHistory([]);
     setQuestionIndex(0);
     setMicError("");
+    setInterviewReport(null);
   }, []);
+
+  const generateReport = useCallback(async (history: QARecord[]) => {
+    setReportLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("interview-coach", {
+        body: {
+          action: "generate_report",
+          jobTitle, company, resumeText,
+          conversationHistory: history.map(qa => ({
+            question: qa.question,
+            answer: qa.answer,
+            score: qa.score,
+            feedback: qa.feedback,
+          })),
+        },
+      });
+      if (error) throw error;
+      setInterviewReport(data);
+    } catch (err: any) {
+      toast.error("报告生成失败：" + (err.message || "未知错误"));
+    } finally {
+      setReportLoading(false);
+    }
+  }, [jobTitle, company, resumeText]);
 
   /* ── Questions generation & evaluation ── */
   const generateQuestions = async () => {
