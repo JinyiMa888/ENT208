@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,15 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import Navbar from "@/components/Navbar";
 import WorkflowSteps from "@/components/WorkflowSteps";
 import ResumeUploader from "@/components/ResumeUploader";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { MessageSquare, Loader2, Send, Star, Brain, Target, ChevronDown, ChevronUp, Mic, MicOff, Volume2, Lightbulb, CheckCircle, AlertTriangle } from "lucide-react";
+import {
+  Loader2, Star, Brain, Target, ChevronDown, ChevronUp,
+  Mic, MicOff, Volume2, Lightbulb, CheckCircle, AlertTriangle,
+  StopCircle, SkipForward, RotateCcw
+} from "lucide-react";
 
+/* ── Types ── */
 interface Question {
   question: string;
   category: string;
@@ -25,83 +29,277 @@ interface Question {
   why?: string;
 }
 
-interface MockMessage {
-  role: "interviewer" | "user";
-  content: string;
+interface QARecord {
+  question: string;
+  answer: string;
   score?: number;
   feedback?: string;
 }
 
+/* ── Component ── */
 const InterviewPage = () => {
   const [searchParams] = useSearchParams();
   const [jobTitle, setJobTitle] = useState(searchParams.get("jobTitle") || "");
   const [company, setCompany] = useState(searchParams.get("company") || "");
   const { resumeText } = useResumeStore();
+  const [activeTab, setActiveTab] = useState("questions");
 
+  // Questions tab
   const [generating, setGenerating] = useState(false);
   const [weaknessQuestions, setWeaknessQuestions] = useState<Question[]>([]);
   const [commonQuestions, setCommonQuestions] = useState<Question[]>([]);
   const [expandedQ, setExpandedQ] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("questions");
 
+  // Practice tab
   const [selectedQuestion, setSelectedQuestion] = useState("");
   const [userAnswer, setUserAnswer] = useState("");
   const [evaluating, setEvaluating] = useState(false);
   const [evalResult, setEvalResult] = useState<any>(null);
 
-  const [mockMessages, setMockMessages] = useState<MockMessage[]>([]);
-  const [mockInput, setMockInput] = useState("");
+  // Mock interview (voice Q&A)
+  const [mockPhase, setMockPhase] = useState<"idle" | "asking" | "listening" | "processing" | "done">("idle");
+  const [currentQuestion, setCurrentQuestion] = useState("");
+  const [currentTranscript, setCurrentTranscript] = useState("");
+  const [qaHistory, setQaHistory] = useState<QARecord[]>([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [mockLoading, setMockLoading] = useState(false);
-  const [mockStarted, setMockStarted] = useState(false);
+  const [micError, setMicError] = useState("");
 
-  // Voice state
-  const [isListening, setIsListening] = useState(false);
-  const [_isSpeaking, setIsSpeaking] = useState(false);
+  // Refs
   const recognitionRef = useRef<any>(null);
-  const synthRef = useRef(window.speechSynthesis);
+  const synthRef = useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
+  const finalTranscriptRef = useRef("");
 
-  const supportsVoice = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+      synthRef.current?.cancel();
+    };
+  }, []);
 
-  const startListening = () => {
-    if (!supportsVoice) { toast.error("浏览器不支持语音识别，请使用 Chrome"); return; }
+  /* ── Speech helpers ── */
+  const speakText = useCallback((text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!synthRef.current) { resolve(); return; }
+      synthRef.current.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "zh-CN";
+      utterance.rate = 0.95;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      synthRef.current.speak(utterance);
+    });
+  }, []);
+
+  const requestMicPermission = useCallback(async (): Promise<boolean> => {
+    try {
+      // Check permission status first
+      try {
+        if (navigator.permissions) {
+          const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+          if (status.state === "denied") {
+            setMicError("麦克风权限被拒绝，请在浏览器设置中允许麦克风访问");
+            return false;
+          }
+        }
+      } catch { /* Safari doesn't support this query */ }
+
+      // Actually request access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop()); // release immediately
+      setMicError("");
+      return true;
+    } catch (err: any) {
+      if (err.name === "NotAllowedError") {
+        setMicError("麦克风权限被拒绝，请点击地址栏左侧的锁图标允许麦克风");
+      } else if (err.name === "NotFoundError") {
+        setMicError("未检测到麦克风设备");
+      } else {
+        setMicError("无法访问麦克风：" + err.message);
+      }
+      return false;
+    }
+  }, []);
+
+  const startListeningForAnswer = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setMicError("浏览器不支持语音识别，请使用 Chrome");
+      return;
+    }
+
     const recognition = new SpeechRecognition();
     recognition.lang = "zh-CN";
     recognition.interimResults = true;
     recognition.continuous = true;
 
+    finalTranscriptRef.current = "";
+
     recognition.onresult = (event: any) => {
-      let transcript = "";
+      let interim = "";
+      let final = "";
       for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += t;
+        } else {
+          interim += t;
+        }
       }
-      setMockInput(transcript);
+      finalTranscriptRef.current = final;
+      setCurrentTranscript(final + interim);
     };
 
-    recognition.onerror = () => { setIsListening(false); };
-    recognition.onend = () => { setIsListening(false); };
+    recognition.onerror = (e: any) => {
+      console.error("Speech recognition error:", e.error);
+      if (e.error === "not-allowed") {
+        setMicError("麦克风权限被拒绝");
+      }
+    };
+
+    recognition.onend = () => {
+      // Don't auto-restart, user controls flow
+    };
 
     recognition.start();
     recognitionRef.current = recognition;
-    setIsListening(true);
-  };
+    setMockPhase("listening");
+  }, []);
 
-  const stopListening = () => {
+  const stopListeningAndSubmit = useCallback(async () => {
     recognitionRef.current?.stop();
-    setIsListening(false);
-  };
+    recognitionRef.current = null;
 
-  const speakText = (text: string) => {
-    if (!synthRef.current) return;
-    synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "zh-CN";
-    utterance.rate = 0.9;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    synthRef.current.speak(utterance);
-  };
+    const answer = finalTranscriptRef.current || currentTranscript;
+    if (!answer.trim()) {
+      toast.error("未检测到语音内容，请重试");
+      setMockPhase("asking");
+      return;
+    }
 
+    setMockPhase("processing");
+
+    try {
+      const newHistory = [...qaHistory, { question: currentQuestion, answer }];
+      const { data, error } = await supabase.functions.invoke("interview-coach", {
+        body: {
+          action: "mock_interview",
+          jobTitle, company, resumeText,
+          answer,
+          conversationHistory: newHistory.flatMap(qa => [
+            { role: "interviewer", content: qa.question },
+            { role: "user", content: qa.answer },
+          ]),
+        },
+      });
+      if (error) throw error;
+
+      const record: QARecord = {
+        question: currentQuestion,
+        answer,
+        score: data.feedbackOnLastAnswer?.score,
+        feedback: data.feedbackOnLastAnswer?.brief,
+      };
+
+      const updatedHistory = [...qaHistory, record];
+      setQaHistory(updatedHistory);
+      setQuestionIndex(prev => prev + 1);
+      setCurrentTranscript("");
+
+      const nextQ = data.response || data.nextQuestion;
+      if (nextQ && !nextQ.includes("面试结束") && !nextQ.includes("总结")) {
+        setCurrentQuestion(nextQ);
+        setMockPhase("asking");
+        await speakText(nextQ);
+      } else {
+        setCurrentQuestion("");
+        setMockPhase("done");
+        toast.success("模拟面试结束！");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "处理回答失败");
+      setMockPhase("asking");
+    }
+  }, [qaHistory, currentQuestion, currentTranscript, jobTitle, company, resumeText, speakText]);
+
+  /* ── Mock interview flow ── */
+  const startMockInterview = useCallback(async () => {
+    const hasPermission = await requestMicPermission();
+    if (!hasPermission) return;
+
+    setMockLoading(true);
+    setQaHistory([]);
+    setQuestionIndex(0);
+    setCurrentTranscript("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("interview-coach", {
+        body: { action: "mock_interview", jobTitle, company, resumeText },
+      });
+      if (error) throw error;
+
+      const firstQ = data.response || data.nextQuestion;
+      setCurrentQuestion(firstQ);
+      setMockPhase("asking");
+      await speakText(firstQ);
+    } catch (err: any) {
+      toast.error(err.message || "启动面试失败");
+      setMockPhase("idle");
+    } finally {
+      setMockLoading(false);
+    }
+  }, [jobTitle, company, resumeText, requestMicPermission, speakText]);
+
+  const skipQuestion = useCallback(async () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setCurrentTranscript("");
+    setMockPhase("processing");
+
+    try {
+      const newHistory = [...qaHistory, { question: currentQuestion, answer: "（跳过）" }];
+      const { data, error } = await supabase.functions.invoke("interview-coach", {
+        body: {
+          action: "mock_interview", jobTitle, company, resumeText,
+          answer: "我选择跳过这个问题",
+          conversationHistory: newHistory.flatMap(qa => [
+            { role: "interviewer", content: qa.question },
+            { role: "user", content: qa.answer },
+          ]),
+        },
+      });
+      if (error) throw error;
+
+      setQaHistory([...qaHistory, { question: currentQuestion, answer: "（跳过）" }]);
+      setQuestionIndex(prev => prev + 1);
+
+      const nextQ = data.response || data.nextQuestion;
+      if (nextQ && !nextQ.includes("面试结束")) {
+        setCurrentQuestion(nextQ);
+        setMockPhase("asking");
+        await speakText(nextQ);
+      } else {
+        setMockPhase("done");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "跳过失败");
+      setMockPhase("asking");
+    }
+  }, [qaHistory, currentQuestion, jobTitle, company, resumeText, speakText]);
+
+  const resetMockInterview = useCallback(() => {
+    recognitionRef.current?.abort();
+    synthRef.current?.cancel();
+    setMockPhase("idle");
+    setCurrentQuestion("");
+    setCurrentTranscript("");
+    setQaHistory([]);
+    setQuestionIndex(0);
+    setMicError("");
+  }, []);
+
+  /* ── Questions generation & evaluation ── */
   const generateQuestions = async () => {
     if (!jobTitle) { toast.error("请输入目标职位"); return; }
     setGenerating(true);
@@ -137,52 +335,7 @@ const InterviewPage = () => {
     }
   };
 
-  const startMockInterview = async () => {
-    setMockStarted(true);
-    setMockMessages([]);
-    setMockLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("interview-coach", {
-        body: { action: "mock_interview", jobTitle, company, resumeText },
-      });
-      if (error) throw error;
-      const text = data.response || data.nextQuestion;
-      setMockMessages([{ role: "interviewer", content: text }]);
-      speakText(text);
-    } catch (err: any) {
-      toast.error(err.message || "启动失败");
-    } finally {
-      setMockLoading(false);
-    }
-  };
-
-  const sendMockAnswer = async () => {
-    if (!mockInput.trim()) return;
-    const newMsgs: MockMessage[] = [...mockMessages, { role: "user", content: mockInput }];
-    setMockMessages(newMsgs);
-    setMockInput("");
-    setMockLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("interview-coach", {
-        body: { action: "mock_interview", jobTitle, company, resumeText, answer: mockInput, conversationHistory: newMsgs },
-      });
-      if (error) throw error;
-      const text = data.response || data.nextQuestion;
-      const interviewerMsg: MockMessage = {
-        role: "interviewer",
-        content: text,
-        score: data.feedbackOnLastAnswer?.score,
-        feedback: data.feedbackOnLastAnswer?.brief,
-      };
-      setMockMessages([...newMsgs, interviewerMsg]);
-      speakText(text);
-    } catch (err: any) {
-      toast.error(err.message || "发送失败");
-    } finally {
-      setMockLoading(false);
-    }
-  };
-
+  /* ── Render helpers ── */
   const difficultyBadge = (d: string) => {
     if (d === "hard") return <Badge variant="destructive" className="text-xs">困难</Badge>;
     if (d === "medium") return <Badge variant="secondary" className="text-xs">中等</Badge>;
@@ -200,7 +353,7 @@ const InterviewPage = () => {
             <div key={key} className="rounded-lg border p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {difficultyBadge(q.difficulty)}
                     <Badge variant="outline" className="text-xs">{q.category}</Badge>
                     {q.framework && <Badge variant="secondary" className="text-xs">{q.framework}</Badge>}
@@ -234,6 +387,10 @@ const InterviewPage = () => {
     </div>
   );
 
+  const avgScore = qaHistory.filter(q => q.score).length > 0
+    ? Math.round(qaHistory.reduce((sum, q) => sum + (q.score || 0), 0) / qaHistory.filter(q => q.score).length)
+    : 0;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -265,6 +422,7 @@ const InterviewPage = () => {
               </TabsTrigger>
             </TabsList>
 
+            {/* ── Questions Tab ── */}
             <TabsContent value="questions" className="space-y-6">
               {weaknessQuestions.length === 0 && commonQuestions.length === 0 ? (
                 <Card className="flex min-h-[300px] items-center justify-center">
@@ -281,6 +439,7 @@ const InterviewPage = () => {
               )}
             </TabsContent>
 
+            {/* ── Practice Tab ── */}
             <TabsContent value="practice" className="space-y-4">
               <Card>
                 <CardContent className="space-y-4 pt-6">
@@ -297,7 +456,6 @@ const InterviewPage = () => {
                   </Button>
                 </CardContent>
               </Card>
-
               {evalResult && (
                 <Card>
                   <CardHeader>
@@ -319,13 +477,13 @@ const InterviewPage = () => {
                     ))}
                     {evalResult.strengths?.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-green-600 flex items-center gap-1"><CheckCircle className="h-3.5 w-3.5" /> 亮点</p>
+                        <p className="text-sm font-medium flex items-center gap-1" style={{ color: "hsl(var(--primary))" }}><CheckCircle className="h-3.5 w-3.5" /> 亮点</p>
                         {evalResult.strengths.map((s: string, i: number) => <p key={i} className="text-xs text-muted-foreground">• {s}</p>)}
                       </div>
                     )}
                     {evalResult.improvements?.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-yellow-600 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> 改进</p>
+                        <p className="text-sm font-medium flex items-center gap-1 text-amber-600"><AlertTriangle className="h-3.5 w-3.5" /> 改进</p>
                         {evalResult.improvements.map((s: string, i: number) => <p key={i} className="text-xs text-muted-foreground">• {s}</p>)}
                       </div>
                     )}
@@ -340,85 +498,165 @@ const InterviewPage = () => {
               )}
             </TabsContent>
 
+            {/* ── Voice Mock Interview Tab ── */}
             <TabsContent value="mock">
-              {!mockStarted ? (
+              {mockPhase === "idle" ? (
                 <Card className="flex min-h-[400px] items-center justify-center">
-                  <div className="text-center">
-                    <MessageSquare className="mx-auto h-16 w-16 text-muted-foreground opacity-30" />
-                    <p className="mt-4 text-lg font-medium">语音模拟面试</p>
-                    <p className="mt-1 text-sm text-muted-foreground">AI 扮演面试官，支持语音对话，逐题提问并评分</p>
-                    {supportsVoice && (
-                      <p className="mt-2 text-xs text-muted-foreground flex items-center justify-center gap-1">
-                        <Mic className="h-3 w-3" /> 支持语音输入 · <Volume2 className="h-3 w-3" /> 支持语音朗读
-                      </p>
+                  <div className="text-center max-w-md">
+                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                      <Mic className="h-10 w-10 text-primary" />
+                    </div>
+                    <p className="text-xl font-semibold">语音一问一答模拟面试</p>
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                      AI 面试官将逐题提问并朗读问题，你通过麦克风语音作答。<br />
+                      每道题回答后 AI 会即时评分，最后生成面试总结。
+                    </p>
+                    {micError && (
+                      <div className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                        {micError}
+                      </div>
                     )}
-                    <Button className="mt-6" onClick={startMockInterview} disabled={mockLoading}>
+                    <Button className="mt-6" size="lg" onClick={startMockInterview} disabled={mockLoading}>
                       {mockLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic className="mr-2 h-4 w-4" />}
-                      开始语音面试
+                      开始面试
                     </Button>
                   </div>
                 </Card>
+              ) : mockPhase === "done" ? (
+                /* ── Interview Summary ── */
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>面试总结</span>
+                      <Badge variant="outline" className="text-lg px-3 py-1">{avgScore} 分</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {qaHistory.map((qa, i) => (
+                      <div key={i} className="rounded-lg border p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium">Q{i + 1}: {qa.question}</p>
+                          {qa.score !== undefined && (
+                            <Badge variant={qa.score >= 70 ? "default" : "secondary"} className="shrink-0">
+                              {qa.score}分
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">A: {qa.answer}</p>
+                        {qa.feedback && <p className="text-xs text-muted-foreground italic">💡 {qa.feedback}</p>}
+                      </div>
+                    ))}
+                    <Button variant="outline" className="w-full" onClick={resetMockInterview}>
+                      <RotateCcw className="mr-2 h-4 w-4" /> 重新开始
+                    </Button>
+                  </CardContent>
+                </Card>
               ) : (
-                <Card className="flex flex-col" style={{ minHeight: "500px" }}>
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
-                      {mockMessages.map((msg, i) => (
-                        <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-[80%] rounded-lg p-3 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                            <p className="whitespace-pre-wrap">{msg.content}</p>
-                            {msg.role === "interviewer" && (
-                              <Button size="sm" variant="ghost" className="mt-1 h-6 px-2 text-xs" onClick={() => speakText(msg.content)}>
-                                <Volume2 className="mr-1 h-3 w-3" /> 朗读
-                              </Button>
-                            )}
-                            {msg.score !== undefined && (
-                              <p className="mt-2 text-xs opacity-80">上一题得分：{msg.score}/100 — {msg.feedback}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      {mockLoading && (
-                        <div className="flex justify-start">
-                          <div className="rounded-lg bg-muted p-3">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </div>
-                        </div>
+                /* ── Active Interview ── */
+                <Card className="min-h-[500px] flex flex-col">
+                  {/* Progress bar */}
+                  <div className="border-b px-6 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">第 {questionIndex + 1} 题</span>
+                      {qaHistory.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          已答 {qaHistory.length} 题 · 平均 {avgScore} 分
+                        </span>
                       )}
                     </div>
-                  </ScrollArea>
-                  <div className="border-t p-4">
-                    {isListening && (
-                      <div className="mb-2 flex items-center gap-2 text-sm text-primary">
-                        <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-                        正在录音...说完后点击停止
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Textarea
-                        placeholder="输入或语音回答..."
-                        value={mockInput}
-                        onChange={e => setMockInput(e.target.value)}
-                        rows={2}
-                        className="flex-1"
-                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMockAnswer(); } }}
-                      />
-                      <div className="flex flex-col gap-1">
-                        {supportsVoice && (
-                          <Button
-                            size="icon"
-                            variant={isListening ? "destructive" : "outline"}
-                            onClick={isListening ? stopListening : startListening}
-                            disabled={mockLoading}
-                          >
-                            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                          </Button>
-                        )}
-                        <Button size="icon" onClick={sendMockAnswer} disabled={mockLoading || !mockInput.trim()}>
-                          <Send className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={resetMockInterview}>
+                      <StopCircle className="mr-1 h-3.5 w-3.5" /> 结束面试
+                    </Button>
+                  </div>
+
+                  {/* Question display */}
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+                    {/* Interviewer question */}
+                    <div className="w-full max-w-2xl">
+                      <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">面试官提问</p>
+                      <div className="rounded-xl bg-muted p-6">
+                        <p className="text-base leading-relaxed">{currentQuestion}</p>
+                        <Button size="sm" variant="ghost" className="mt-3 text-xs" onClick={() => speakText(currentQuestion)}>
+                          <Volume2 className="mr-1 h-3 w-3" /> 重新朗读
                         </Button>
                       </div>
                     </div>
+
+                    {/* Voice recording area */}
+                    {mockPhase === "asking" && (
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">准备好后，点击麦克风开始作答</p>
+                        <Button
+                          size="lg"
+                          className="h-20 w-20 rounded-full"
+                          onClick={startListeningForAnswer}
+                        >
+                          <Mic className="h-8 w-8" />
+                        </Button>
+                        <div>
+                          <Button variant="ghost" size="sm" onClick={skipQuestion}>
+                            <SkipForward className="mr-1 h-3.5 w-3.5" /> 跳过此题
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {mockPhase === "listening" && (
+                      <div className="space-y-4 w-full max-w-2xl">
+                        {/* Listening indicator */}
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="h-3 w-3 animate-pulse rounded-full bg-destructive" />
+                          <span className="text-sm font-medium text-destructive">正在录音...</span>
+                        </div>
+
+                        {/* Live transcript */}
+                        <div className="rounded-xl border-2 border-dashed border-primary/30 p-6 min-h-[80px]">
+                          {currentTranscript ? (
+                            <p className="text-sm leading-relaxed">{currentTranscript}</p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">请开始说话，语音内容将实时显示在这里...</p>
+                          )}
+                        </div>
+
+                        {/* Stop button */}
+                        <div className="flex items-center justify-center gap-4">
+                          <Button
+                            size="lg"
+                            variant="destructive"
+                            className="h-20 w-20 rounded-full"
+                            onClick={stopListeningAndSubmit}
+                          >
+                            <MicOff className="h-8 w-8" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">说完后点击红色按钮提交回答</p>
+                      </div>
+                    )}
+
+                    {mockPhase === "processing" && (
+                      <div className="space-y-3">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">AI 正在评估你的回答...</p>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Previous answers ticker */}
+                  {qaHistory.length > 0 && (
+                    <div className="border-t px-6 py-3 overflow-x-auto">
+                      <div className="flex gap-2">
+                        {qaHistory.map((qa, i) => (
+                          <Badge
+                            key={i}
+                            variant={qa.answer === "（跳过）" ? "outline" : qa.score && qa.score >= 70 ? "default" : "secondary"}
+                            className="shrink-0"
+                          >
+                            Q{i + 1}: {qa.score ? `${qa.score}分` : "跳过"}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </Card>
               )}
             </TabsContent>
