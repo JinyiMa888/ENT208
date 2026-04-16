@@ -169,11 +169,11 @@ const RewritePage = () => {
                   </CardContent>
                 </Card>
 
-                <Tabs defaultValue="compare">
+                <Tabs defaultValue="tips">
                   <TabsList>
+                    <TabsTrigger value="tips">优化建议</TabsTrigger>
                     <TabsTrigger value="compare">修改对照</TabsTrigger>
                     <TabsTrigger value="full">完整简历</TabsTrigger>
-                    <TabsTrigger value="tips">优化建议</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="compare" className="space-y-3">
