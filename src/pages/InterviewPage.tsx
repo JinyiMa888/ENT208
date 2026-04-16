@@ -216,7 +216,7 @@ const InterviewPage = () => {
                   <Button size="sm" variant="ghost" onClick={() => setExpandedQ(isExpanded ? null : i)}>
                     {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setSelectedQuestion(q.question)}>
+                  <Button size="sm" variant="outline" onClick={() => { setSelectedQuestion(q.question); setActiveTab("practice"); }}>
                     练习
                   </Button>
                 </div>
@@ -256,7 +256,7 @@ const InterviewPage = () => {
             </Card>
           </div>
 
-          <Tabs defaultValue="questions">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="questions">题目预测</TabsTrigger>
               <TabsTrigger value="practice">回答练习</TabsTrigger>
