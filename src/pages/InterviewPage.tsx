@@ -219,7 +219,8 @@ const InterviewPage = () => {
       } else {
         setCurrentQuestion("");
         setMockPhase("done");
-        toast.success("模拟面试结束！");
+        toast.success("模拟面试结束，正在生成面试报告...");
+        generateReport(updatedHistory);
       }
     } catch (err: any) {
       toast.error(err.message || "处理回答失败");
