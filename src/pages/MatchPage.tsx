@@ -11,6 +11,7 @@ import WorkflowSteps from "@/components/WorkflowSteps";
 import ResumeUploader from "@/components/ResumeUploader";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { FileSearch, Loader2, CheckCircle, AlertTriangle, XCircle, Target, ArrowRight } from "lucide-react";
 
@@ -32,6 +33,7 @@ const MatchPage = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<MatchResult | null>(null);
   const { resumeText } = useResumeStore();
+  const { user } = useAuth();
 
   useEffect(() => { if (jobId) loadJob(jobId); }, [jobId]);
 
@@ -54,7 +56,24 @@ const MatchPage = () => {
         body: { resumeText, jobDescription, jobTitle, company },
       });
       if (error) throw error;
-      setResult(data as MatchResult);
+      const matchData = data as MatchResult;
+      setResult(matchData);
+
+      // 保存到数据库（仅登录用户）
+      if (user && jobTitle) {
+        await supabase.from("resume_analyses").insert([{
+          user_id: user.id,
+          job_title: jobTitle,
+          company: company || null,
+          match_score: matchData.overallScore,
+          dimensions: matchData.dimensions as never,
+          suggestions: {
+            sentenceAnalysis: matchData.sentenceAnalysis,
+            missingItems: matchData.missingItems,
+            keywords: matchData.keywords,
+          } as never,
+        }]);
+      }
       toast.success("匹配分析完成！");
     } catch (err: any) {
       toast.error(err.message || "分析失败");

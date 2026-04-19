@@ -1,8 +1,28 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Briefcase, FileSearch, PenTool, MessageSquare, BarChart3, Menu, Rocket } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Briefcase,
+  FileSearch,
+  PenTool,
+  MessageSquare,
+  BarChart3,
+  Menu,
+  Rocket,
+  LogOut,
+  User as UserIcon,
+} from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { to: "/jobs", label: "岗位推荐", icon: Briefcase },
@@ -14,7 +34,16 @@ const navItems = [
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
+  const initials = (user?.email?.[0] || "U").toUpperCase();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -39,6 +68,48 @@ const Navbar = () => {
               </Link>
             </Button>
           ))}
+
+          {/* Auth */}
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-2 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">已登录</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    数据看板
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  退出登录
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button size="sm" className="ml-2" asChild>
+              <Link to="/auth">
+                <UserIcon className="mr-1.5 h-4 w-4" />
+                登录
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* Mobile nav */}
@@ -64,6 +135,24 @@ const Navbar = () => {
                   </Link>
                 </Button>
               ))}
+              <div className="mt-4 border-t pt-4">
+                {user ? (
+                  <>
+                    <p className="px-3 pb-2 text-xs text-muted-foreground truncate">{user.email}</p>
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { setOpen(false); handleSignOut(); }}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      退出登录
+                    </Button>
+                  </>
+                ) : (
+                  <Button className="w-full" asChild onClick={() => setOpen(false)}>
+                    <Link to="/auth">
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      登录 / 注册
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
           </SheetContent>
         </Sheet>
