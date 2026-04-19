@@ -61,18 +61,18 @@ const MatchPage = () => {
 
       // 保存到数据库（仅登录用户）
       if (user && jobTitle) {
-        await supabase.from("resume_analyses").insert({
+        await supabase.from("resume_analyses").insert([{
           user_id: user.id,
           job_title: jobTitle,
           company: company || null,
           match_score: matchData.overallScore,
-          dimensions: matchData.dimensions as unknown as Record<string, unknown>,
+          dimensions: matchData.dimensions as never,
           suggestions: {
             sentenceAnalysis: matchData.sentenceAnalysis,
             missingItems: matchData.missingItems,
             keywords: matchData.keywords,
-          } as unknown as Record<string, unknown>,
-        });
+          } as never,
+        }]);
       }
       toast.success("匹配分析完成！");
     } catch (err: any) {
