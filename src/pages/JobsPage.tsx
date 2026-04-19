@@ -251,12 +251,13 @@ const JobsPage = () => {
                         </div>
                       )}
                     </div>
-                    <div className="mt-4 flex gap-2" onClick={e => e.stopPropagation()}>
+                    <div className="mt-4 flex flex-wrap gap-2" onClick={e => e.stopPropagation()}>
                       <Button size="sm" onClick={() => navigate(`/match?jobId=${job.id}`)}>
                         匹配分析 <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/rewrite?jobId=${job.id}`)}>针对性改写</Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/interview?jobTitle=${encodeURIComponent(job.job_title)}&company=${encodeURIComponent(job.company)}`)}>面试辅导</Button>
+                      <MarkAppliedButton jobListingId={job.id} jobTitle={job.job_title} company={job.company} matchScore={job.matchScore} />
                     </div>
                   </CardContent>
                 </Card>
@@ -318,12 +319,13 @@ const JobsPage = () => {
                     {selectedJob.skills.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Button onClick={() => { setSelectedJob(null); navigate(`/match?jobId=${selectedJob.id}`); }}>
                     匹配分析 <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
                   <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/rewrite?jobId=${selectedJob.id}`); }}>针对性改写</Button>
                   <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/interview?jobTitle=${encodeURIComponent(selectedJob.job_title)}&company=${encodeURIComponent(selectedJob.company)}`); }}>面试辅导</Button>
+                  <MarkAppliedButton jobListingId={selectedJob.id} jobTitle={selectedJob.job_title} company={selectedJob.company} matchScore={selectedJob.matchScore} size="default" />
                 </div>
               </div>
             </>
