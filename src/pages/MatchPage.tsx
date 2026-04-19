@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import WorkflowSteps from "@/components/WorkflowSteps";
 import ResumeUploader from "@/components/ResumeUploader";
+import MarkAppliedButton from "@/components/MarkAppliedButton";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -238,14 +239,25 @@ const MatchPage = () => {
 
                 {/* Next step CTA */}
                 <Card className="border-primary/30 bg-primary/5">
-                  <CardContent className="flex items-center justify-between p-4">
+                  <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                     <div>
-                      <p className="font-medium">下一步：针对性改写简历</p>
-                      <p className="text-sm text-muted-foreground">根据匹配分析结果，AI 自动优化你的简历</p>
+                      <p className="font-medium">下一步：针对性改写或记录投递</p>
+                      <p className="text-sm text-muted-foreground">改写简历提升匹配度，或直接标记本次投递</p>
                     </div>
-                    <Button onClick={goToRewrite}>
-                      简历改写 <ArrowRight className="ml-1 h-4 w-4" />
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {jobTitle && company && (
+                        <MarkAppliedButton
+                          jobListingId={jobId}
+                          jobTitle={jobTitle}
+                          company={company}
+                          matchScore={result?.overallScore}
+                          size="default"
+                        />
+                      )}
+                      <Button onClick={goToRewrite}>
+                        简历改写 <ArrowRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </>
