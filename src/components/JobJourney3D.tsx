@@ -1,6 +1,6 @@
 import { useRef, useMemo, useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, OrbitControls, Environment, RoundedBox, Text } from "@react-three/drei";
+import { Float, OrbitControls, Environment, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { FileText, Search, PenTool, MessageSquare, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
