@@ -76,31 +76,32 @@ const JobsPage = () => {
     if (!resumeText) { toast.error("请先上传简历"); return; }
     setAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("recommend-jobs", { body: { resumeText } });
+      // 传入当前过滤后的岗位列表，使用与"简历匹配分析"一致的AI评分逻辑
+      const targetJobs = filteredJobs.length > 0 ? filteredJobs : jobs;
+      const { data, error } = await supabase.functions.invoke("recommend-jobs", {
+        body: { resumeText, jobs: targetJobs },
+      });
       if (error) throw error;
-      const profile = data?.profile;
-      const criteria = data?.matchCriteria;
-      if (!criteria) throw new Error("分析失败");
+      const results = data?.results;
+      if (!Array.isArray(results)) throw new Error("分析失败");
 
+      const scoreMap = new Map(results.map((r: any) => [r.id, r]));
       const scored = jobs.map(job => {
-        const jobSkills = job.skills.map(s => s.toLowerCase());
-        const mustHave = criteria.mustHaveSkills?.map((s: string) => s.toLowerCase()) || [];
-        const niceToHave = criteria.niceToHaveSkills?.map((s: string) => s.toLowerCase()) || [];
-        const matched = jobSkills.filter((s: string) => mustHave.some((m: string) => s.includes(m) || m.includes(s)));
-        const partial = jobSkills.filter((s: string) => niceToHave.some((n: string) => s.includes(n) || n.includes(s)));
-        const missing = mustHave.filter((m: string) => !jobSkills.some((s: string) => s.includes(m) || m.includes(s)));
-        const skillScore = (matched.length / Math.max(mustHave.length, 1)) * 60;
-        const bonusScore = (partial.length / Math.max(niceToHave.length, 1)) * 20;
-        const expMatch = profile?.experienceYears >= job.experience_years ? 20 : 10;
+        const r: any = scoreMap.get(job.id);
+        if (!r) return job;
         return {
           ...job,
-          matchScore: Math.min(100, Math.round(skillScore + bonusScore + expMatch)),
-          matchReasons: { matched, partial, missing },
+          matchScore: r.overallScore,
+          matchReasons: {
+            matched: r.matched || [],
+            partial: r.partial || [],
+            missing: r.missing || [],
+          },
         };
       });
       scored.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
       setJobs(scored);
-      toast.success("匹配分析完成！");
+      toast.success(`匹配分析完成！共评估 ${results.length} 个岗位`);
     } catch (err: any) {
       toast.error(err.message || "分析失败");
     } finally {

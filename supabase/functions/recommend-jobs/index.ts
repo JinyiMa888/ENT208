@@ -11,10 +11,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { resumeText, preferences } = await req.json();
+    const { resumeText, jobs } = await req.json();
 
     if (!resumeText) {
       return new Response(JSON.stringify({ error: "resumeText is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      return new Response(JSON.stringify({ error: "jobs array is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -28,31 +34,49 @@ Deno.serve(async (req) => {
       });
     }
 
-    const prompt = `你是一位专业的职业顾问。请分析以下简历内容，提取关键信息用于岗位匹配。
+    // 简化岗位描述以减少 token
+    const jobsForPrompt = jobs.map((j: any) => ({
+      id: j.id,
+      title: j.job_title,
+      company: j.company,
+      skills: j.skills || [],
+      exp: j.experience_years,
+      edu: j.education,
+      desc: (j.description || "").slice(0, 200),
+      req: (j.requirements || "").slice(0, 300),
+    }));
+
+    const prompt = `你是专业简历匹配分析师。请用与"简历-岗位匹配分析"完全一致的5维度评分标准（技能匹配/经验匹配/教育背景/关键词覆盖/表述专业度），为下列每个岗位评估匹配度。
 
 简历内容：
 ${resumeText}
 
-用户偏好：
-${preferences ? JSON.stringify(preferences) : "无特殊偏好"}
+岗位列表（共${jobsForPrompt.length}个）：
+${JSON.stringify(jobsForPrompt, null, 2)}
 
-请严格按以下JSON格式返回分析结果：
+评分要求：
+- 每个维度0-100分，overallScore为5个维度的加权平均（技能30% 经验25% 教育15% 关键词20% 表述10%）
+- 必须严格、客观，与单个岗位深度匹配分析的结果保持一致
+- matched/missing只列举该岗位技能列表中的关键技能（最多5个）
+
+严格按JSON返回：
 {
-  "profile": {
-    "currentTitle": "当前职位",
-    "skills": ["技能1", "技能2"],
-    "experienceYears": 3,
-    "education": "学历",
-    "industries": ["行业1"],
-    "summary": "一句话概括"
-  },
-  "matchCriteria": {
-    "mustHaveSkills": ["必须匹配的技能"],
-    "niceToHaveSkills": ["加分技能"],
-    "preferredIndustries": ["适合的行业"],
-    "suitableRoles": ["适合的岗位类型"],
-    "salaryRange": {"min": 20000, "max": 50000}
-  }
+  "results": [
+    {
+      "id": "岗位id",
+      "overallScore": 75,
+      "dimensions": {
+        "skill": 80,
+        "experience": 70,
+        "education": 85,
+        "keywords": 65,
+        "expression": 75
+      },
+      "matched": ["匹配的技能"],
+      "partial": ["部分相关技能"],
+      "missing": ["缺失的关键技能"]
+    }
+  ]
 }`;
 
     const aiResponse = await fetch(AI_API_URL, {
@@ -64,7 +88,7 @@ ${preferences ? JSON.stringify(preferences) : "无特殊偏好"}
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "你是专业职业顾问。只返回JSON格式结果。" },
+          { role: "system", content: "你是专业简历匹配分析师，评分标准严格统一。只返回JSON格式结果。" },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
