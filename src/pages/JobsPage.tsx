@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import Navbar from "@/components/Navbar";
 import WorkflowSteps from "@/components/WorkflowSteps";
 import ResumeUploader from "@/components/ResumeUploader";
+import MarkAppliedButton from "@/components/MarkAppliedButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { toast } from "sonner";
