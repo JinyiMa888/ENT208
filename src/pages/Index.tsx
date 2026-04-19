@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
+import JobJourney3D from "@/components/JobJourney3D";
 import { Briefcase, FileSearch, PenTool, MessageSquare, ArrowRight, CheckCircle, Sparkles } from "lucide-react";
 
 const features = [
@@ -68,6 +69,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* 3D 数字人求职旅程 - 滚动触发 */}
+      <JobJourney3D />
 
       {/* How it works - S-curve layout */}
       <section className="py-20 bg-muted/30">
