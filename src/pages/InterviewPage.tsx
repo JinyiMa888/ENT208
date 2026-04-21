@@ -19,6 +19,8 @@ import {
   StopCircle, SkipForward, RotateCcw, FileText, TrendingUp,
   Award
 } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
+import { useToast } from "@/hooks/use-toast";
 
 /* ── Types ── */
 interface Question {
@@ -40,6 +42,7 @@ interface QARecord {
 /* ── Component ── */
 const InterviewPage = () => {
   const [searchParams] = useSearchParams();
+  const { t, lang } = useLanguage();
   const [jobTitle, setJobTitle] = useState(searchParams.get("jobTitle") || "");
   const [company, setCompany] = useState(searchParams.get("company") || "");
   const { resumeText } = useResumeStore();
