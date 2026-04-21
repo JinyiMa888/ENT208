@@ -46,7 +46,7 @@ const JobsPage = () => {
   const [jobTitleFilter, setJobTitleFilter] = useState("all");
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const { resumeText } = useResumeStore();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => { fetchJobs(); }, []);
@@ -81,7 +81,7 @@ const JobsPage = () => {
     try {
       const targetJobs = filteredJobs.length > 0 ? filteredJobs : jobs;
       const { data, error } = await supabase.functions.invoke("recommend-jobs", {
-        body: { resumeText, jobs: targetJobs },
+        body: { resumeText, jobs: targetJobs, lang },
       });
       if (error) throw error;
       const results = data?.results;
