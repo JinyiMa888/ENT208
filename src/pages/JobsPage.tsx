@@ -212,13 +212,20 @@ const JobsPage = () => {
             ) : filteredJobs.length === 0 ? (
               <Card className="py-20 text-center text-muted-foreground">{t("jobs.empty")}</Card>
             ) : (
-              filteredJobs.map(job => (
+              filteredJobs.map(job => {
+                const title = pick(job.job_title, job.job_title_en, lang);
+                const comp = pick(job.company, job.company_en, lang);
+                const loc = pick(job.location, job.location_en, lang);
+                const desc = pick(job.description, job.description_en, lang);
+                const skillList = lang === "en" && job.skills_en?.length ? job.skills_en : job.skills;
+                const sep = lang === "en" ? ", " : "、";
+                return (
                 <Card key={job.id} className="transition-shadow hover:shadow-md cursor-pointer" onClick={() => setSelectedJob(job)}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{job.job_title}</h3>
+                          <h3 className="text-lg font-semibold">{title}</h3>
                           {job.matchScore !== undefined && (
                             <Badge variant={job.matchScore >= 80 ? "default" : job.matchScore >= 60 ? "secondary" : "outline"}>
                               {t("jobs.match")} {job.matchScore}%
@@ -227,8 +234,8 @@ const JobsPage = () => {
                           <Badge variant="outline" className="text-xs">{jobTypeLabel(job.job_type)}</Badge>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" />{job.company}</span>
-                          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
+                          <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" />{comp}</span>
+                          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{loc}</span>
                           <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{job.experience_years}{t("jobs.yearsPlus")}</span>
                           <span className="flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" />{educationLabel(job.education)}</span>
                           {job.company_size && <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{job.company_size}</span>}
@@ -236,10 +243,10 @@ const JobsPage = () => {
                             <span className="flex items-center gap-1"><Banknote className="h-3.5 w-3.5" />{job.salary_min / 1000}-{job.salary_max / 1000}K</span>
                           )}
                         </div>
-                        <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{job.description}</p>
+                        <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{desc}</p>
                         <div className="mt-3 flex flex-wrap gap-1.5">
-                          {job.skills.slice(0, 6).map(s => <Badge key={s} variant="outline" className="text-xs">{s}</Badge>)}
-                          {job.skills.length > 6 && <Badge variant="outline" className="text-xs">+{job.skills.length - 6}</Badge>}
+                          {skillList.slice(0, 6).map(s => <Badge key={s} variant="outline" className="text-xs">{s}</Badge>)}
+                          {skillList.length > 6 && <Badge variant="outline" className="text-xs">+{skillList.length - 6}</Badge>}
                         </div>
 
                         {job.matchReasons && (
@@ -247,19 +254,19 @@ const JobsPage = () => {
                             {job.matchReasons.matched.length > 0 && (
                               <div className="flex items-start gap-2 text-xs">
                                 <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-green-500" />
-                                <span>{t("jobs.matched")}{job.matchReasons.matched.join("、")}</span>
+                                <span>{t("jobs.matched")}{job.matchReasons.matched.join(sep)}</span>
                               </div>
                             )}
                             {job.matchReasons.partial.length > 0 && (
                               <div className="flex items-start gap-2 text-xs">
                                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-yellow-500" />
-                                <span>{t("jobs.partial")}{job.matchReasons.partial.join("、")}</span>
+                                <span>{t("jobs.partial")}{job.matchReasons.partial.join(sep)}</span>
                               </div>
                             )}
                             {job.matchReasons.missing.length > 0 && (
                               <div className="flex items-start gap-2 text-xs">
                                 <XCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-500" />
-                                <span>{t("jobs.missing")}{job.matchReasons.missing.join("、")}</span>
+                                <span>{t("jobs.missing")}{job.matchReasons.missing.join(sep)}</span>
                               </div>
                             )}
                           </div>
@@ -282,12 +289,13 @@ const JobsPage = () => {
                         {t("jobs.matchAnalysis")} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/rewrite?jobId=${job.id}`)}>{t("jobs.targetedRewrite")}</Button>
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/interview?jobTitle=${encodeURIComponent(job.job_title)}&company=${encodeURIComponent(job.company)}`)}>{t("jobs.interviewCoach")}</Button>
-                      <MarkAppliedButton jobListingId={job.id} jobTitle={job.job_title} company={job.company} matchScore={job.matchScore} />
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/interview?jobTitle=${encodeURIComponent(title)}&company=${encodeURIComponent(comp)}`)}>{t("jobs.interviewCoach")}</Button>
+                      <MarkAppliedButton jobListingId={job.id} jobTitle={title} company={comp} matchScore={job.matchScore} />
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
         </div>
