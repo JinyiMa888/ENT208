@@ -11,7 +11,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { resumeText, jobs } = await req.json();
+    const { resumeText, jobs, lang } = await req.json();
+    const isEn = lang === "en";
 
     if (!resumeText) {
       return new Response(JSON.stringify({ error: "resumeText is required" }), {
@@ -46,7 +47,34 @@ Deno.serve(async (req) => {
       req: (j.requirements || "").slice(0, 300),
     }));
 
-    const prompt = `你是专业简历匹配分析师。请用与"简历-岗位匹配分析"完全一致的5维度评分标准（技能匹配/经验匹配/教育背景/关键词覆盖/表述专业度），为下列每个岗位评估匹配度。
+    const prompt = isEn ? `You are a professional resume-job match analyst. Use the SAME 5-dimension scoring as the deep match analysis (Skill / Experience / Education / Keywords / Expression) to evaluate each job below.
+
+Resume:
+${resumeText}
+
+Jobs (${jobsForPrompt.length} total):
+${JSON.stringify(jobsForPrompt, null, 2)}
+
+Scoring rules:
+- Each dimension 0-100. overallScore = weighted avg (skill 30% experience 25% education 15% keywords 20% expression 10%)
+- Be strict and objective; align with the deep per-job match analysis
+- matched/missing list at most 5 key skills from the job's skill list
+- ALL text fields (matched, partial, missing) must be in ENGLISH
+
+Return strictly in JSON:
+{
+  "results": [
+    {
+      "id": "job id",
+      "overallScore": 75,
+      "dimensions": {"skill": 80, "experience": 70, "education": 85, "keywords": 65, "expression": 75},
+      "matched": ["matched skills"],
+      "partial": ["partially related skills"],
+      "missing": ["missing key skills"]
+    }
+  ]
+}`
+    : `你是专业简历匹配分析师。请用与"简历-岗位匹配分析"完全一致的5维度评分标准（技能匹配/经验匹配/教育背景/关键词覆盖/表述专业度），为下列每个岗位评估匹配度。
 
 简历内容：
 ${resumeText}
@@ -65,13 +93,7 @@ ${JSON.stringify(jobsForPrompt, null, 2)}
     {
       "id": "岗位id",
       "overallScore": 75,
-      "dimensions": {
-        "skill": 80,
-        "experience": 70,
-        "education": 85,
-        "keywords": 65,
-        "expression": 75
-      },
+      "dimensions": {"skill": 80, "experience": 70, "education": 85, "keywords": 65, "expression": 75},
       "matched": ["匹配的技能"],
       "partial": ["部分相关技能"],
       "missing": ["缺失的关键技能"]
@@ -88,7 +110,7 @@ ${JSON.stringify(jobsForPrompt, null, 2)}
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "你是专业简历匹配分析师，评分标准严格统一。只返回JSON格式结果。" },
+          { role: "system", content: isEn ? "You are a professional resume-job match analyst. Return JSON only, in ENGLISH." : "你是专业简历匹配分析师，评分标准严格统一。只返回JSON格式结果。" },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
