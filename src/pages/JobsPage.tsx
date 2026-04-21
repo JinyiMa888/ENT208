@@ -303,15 +303,23 @@ const JobsPage = () => {
 
       <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          {selectedJob && (
+          {selectedJob && (() => {
+            const sTitle = pick(selectedJob.job_title, selectedJob.job_title_en, lang);
+            const sComp = pick(selectedJob.company, selectedJob.company_en, lang);
+            const sLoc = pick(selectedJob.location, selectedJob.location_en, lang);
+            const sInd = pick(selectedJob.industry, selectedJob.industry_en, lang);
+            const sDesc = pick(selectedJob.description, selectedJob.description_en, lang);
+            const sReq = pick(selectedJob.requirements, selectedJob.requirements_en, lang);
+            const sSkills = lang === "en" && selectedJob.skills_en?.length ? selectedJob.skills_en : selectedJob.skills;
+            return (
             <>
               <DialogHeader>
-                <DialogTitle className="text-xl">{selectedJob.job_title}</DialogTitle>
+                <DialogTitle className="text-xl">{sTitle}</DialogTitle>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1"><Building2 className="h-4 w-4" />{selectedJob.company}</span>
-                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{selectedJob.location}</span>
+                  <span className="flex items-center gap-1"><Building2 className="h-4 w-4" />{sComp}</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{sLoc}</span>
                   <Badge variant="outline">{jobTypeLabel(selectedJob.job_type)}</Badge>
-                  <Badge variant="outline">{selectedJob.industry}</Badge>
+                  <Badge variant="outline">{sInd}</Badge>
                 </div>
               </DialogHeader>
               <div className="space-y-4 mt-4">
@@ -340,16 +348,16 @@ const JobsPage = () => {
 
                 <div>
                   <h4 className="font-semibold mb-2">{t("jobs.descTitle")}</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedJob.description}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{sDesc}</p>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">{t("jobs.reqTitle")}</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedJob.requirements}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{sReq}</p>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">{t("jobs.skillsTitle")}</h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {selectedJob.skills.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
+                    {sSkills.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
@@ -357,12 +365,13 @@ const JobsPage = () => {
                     {t("jobs.matchAnalysis")} <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
                   <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/rewrite?jobId=${selectedJob.id}`); }}>{t("jobs.targetedRewrite")}</Button>
-                  <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/interview?jobTitle=${encodeURIComponent(selectedJob.job_title)}&company=${encodeURIComponent(selectedJob.company)}`); }}>{t("jobs.interviewCoach")}</Button>
-                  <MarkAppliedButton jobListingId={selectedJob.id} jobTitle={selectedJob.job_title} company={selectedJob.company} matchScore={selectedJob.matchScore} size="default" />
+                  <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/interview?jobTitle=${encodeURIComponent(sTitle)}&company=${encodeURIComponent(sComp)}`); }}>{t("jobs.interviewCoach")}</Button>
+                  <MarkAppliedButton jobListingId={selectedJob.id} jobTitle={sTitle} company={sComp} matchScore={selectedJob.matchScore} size="default" />
                 </div>
               </div>
             </>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
