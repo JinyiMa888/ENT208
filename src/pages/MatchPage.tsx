@@ -13,6 +13,7 @@ import MarkAppliedButton from "@/components/MarkAppliedButton";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { FileSearch, Loader2, CheckCircle, AlertTriangle, XCircle, Target, ArrowRight } from "lucide-react";
 
@@ -35,6 +36,7 @@ const MatchPage = () => {
   const [result, setResult] = useState<MatchResult | null>(null);
   const { resumeText } = useResumeStore();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => { if (jobId) loadJob(jobId); }, [jobId]);
 
@@ -43,13 +45,13 @@ const MatchPage = () => {
     if (data) {
       setJobTitle(data.job_title);
       setCompany(data.company);
-      setJobDescription(`${data.description}\n\n要求：${data.requirements}`);
+      setJobDescription(`${data.description}\n\n${t("match.requirements")}${data.requirements}`);
     }
   };
 
   const handleAnalyze = async () => {
-    if (!resumeText) { toast.error("请先上传简历"); return; }
-    if (!jobDescription) { toast.error("请输入岗位描述"); return; }
+    if (!resumeText) { toast.error(t("match.uploadFirst")); return; }
+    if (!jobDescription) { toast.error(t("match.jdRequired")); return; }
     setAnalyzing(true);
     setResult(null);
     try {
@@ -60,7 +62,6 @@ const MatchPage = () => {
       const matchData = data as MatchResult;
       setResult(matchData);
 
-      // 保存到数据库（仅登录用户）
       if (user && jobTitle) {
         await supabase.from("resume_analyses").insert([{
           user_id: user.id,
@@ -75,9 +76,9 @@ const MatchPage = () => {
           } as never,
         }]);
       }
-      toast.success("匹配分析完成！");
+      toast.success(t("match.success"));
     } catch (err: any) {
-      toast.error(err.message || "分析失败");
+      toast.error(err.message || t("match.failed"));
     } finally {
       setAnalyzing(false);
     }
@@ -96,9 +97,9 @@ const MatchPage = () => {
   };
 
   const importanceBadge = (imp: string) => {
-    if (imp === "high") return <Badge variant="destructive" className="text-xs">高优先级</Badge>;
-    if (imp === "medium") return <Badge variant="secondary" className="text-xs">中等</Badge>;
-    return <Badge variant="outline" className="text-xs">低</Badge>;
+    if (imp === "high") return <Badge variant="destructive" className="text-xs">{t("match.impHigh")}</Badge>;
+    if (imp === "medium") return <Badge variant="secondary" className="text-xs">{t("match.impMedium")}</Badge>;
+    return <Badge variant="outline" className="text-xs">{t("match.impLow")}</Badge>;
   };
 
   const goToRewrite = () => {
@@ -112,20 +113,20 @@ const MatchPage = () => {
       <Navbar />
       <div className="container py-8">
         <WorkflowSteps />
-        <h1 className="text-3xl font-bold">简历-岗位匹配分析</h1>
-        <p className="mt-2 text-muted-foreground">逐句对比简历与岗位要求，三色标注匹配情况</p>
+        <h1 className="text-3xl font-bold">{t("match.title")}</h1>
+        <p className="mt-2 text-muted-foreground">{t("match.subtitle")}</p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[350px_1fr]">
           <div className="space-y-4">
             <ResumeUploader />
             <Card>
-              <CardHeader><CardTitle className="text-base">目标岗位</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">{t("match.targetJob")}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <Input placeholder="职位名称" value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
-                <Input placeholder="公司名称" value={company} onChange={e => setCompany(e.target.value)} />
-                <Textarea placeholder="粘贴完整岗位描述（JD）..." value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={8} />
+                <Input placeholder={t("match.jobTitlePh")} value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
+                <Input placeholder={t("match.companyPh")} value={company} onChange={e => setCompany(e.target.value)} />
+                <Textarea placeholder={t("match.jdPh")} value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={8} />
                 <Button className="w-full" onClick={handleAnalyze} disabled={analyzing}>
-                  {analyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />分析中...</> : <><FileSearch className="mr-2 h-4 w-4" />开始匹配分析</>}
+                  {analyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("match.analyzing")}</> : <><FileSearch className="mr-2 h-4 w-4" />{t("match.startBtn")}</>}
                 </Button>
               </CardContent>
             </Card>
@@ -136,8 +137,8 @@ const MatchPage = () => {
               <Card className="flex min-h-[400px] items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <Target className="mx-auto h-16 w-16 opacity-30" />
-                  <p className="mt-4 text-lg">上传简历并输入目标岗位JD</p>
-                  <p className="mt-1 text-sm">AI 将逐句分析匹配度</p>
+                  <p className="mt-4 text-lg">{t("match.placeholderTitle")}</p>
+                  <p className="mt-1 text-sm">{t("match.placeholderSub")}</p>
                 </div>
               </Card>
             )}
@@ -146,7 +147,7 @@ const MatchPage = () => {
               <Card className="flex min-h-[400px] items-center justify-center">
                 <div className="text-center">
                   <Loader2 className="mx-auto h-16 w-16 animate-spin text-primary" />
-                  <p className="mt-4 text-lg font-medium">AI 正在逐句分析...</p>
+                  <p className="mt-4 text-lg font-medium">{t("match.analyzingTitle")}</p>
                 </div>
               </Card>
             )}
@@ -179,11 +180,11 @@ const MatchPage = () => {
                 </Card>
 
                 <Card>
-                  <CardHeader><CardTitle className="text-base">关键词分析</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className="text-base">{t("match.keywordTitle")}</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div>
                       <p className="mb-1.5 text-xs font-medium text-green-600 flex items-center gap-1">
-                        <CheckCircle className="h-3.5 w-3.5" /> 已匹配
+                        <CheckCircle className="h-3.5 w-3.5" /> {t("match.kwMatched")}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {result.keywords.matched.map(k => <Badge key={k} className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{k}</Badge>)}
@@ -191,7 +192,7 @@ const MatchPage = () => {
                     </div>
                     <div>
                       <p className="mb-1.5 text-xs font-medium text-red-600 flex items-center gap-1">
-                        <XCircle className="h-3.5 w-3.5" /> 缺失
+                        <XCircle className="h-3.5 w-3.5" /> {t("match.kwMissing")}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {result.keywords.missing.map(k => <Badge key={k} variant="destructive" className="text-xs">{k}</Badge>)}
@@ -201,7 +202,7 @@ const MatchPage = () => {
                 </Card>
 
                 <Card>
-                  <CardHeader><CardTitle className="text-base">逐句匹配分析</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className="text-base">{t("match.sentenceTitle")}</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
                     {result.sentenceAnalysis.map((s, i) => (
                       <div key={i} className={`rounded border-l-4 p-3 ${statusBg(s.status)}`}>
@@ -209,7 +210,7 @@ const MatchPage = () => {
                           {statusIcon(s.status)}
                           <div className="flex-1">
                             <p className="text-sm font-medium">{s.resumeSentence}</p>
-                            {s.relatedRequirement && <p className="mt-1 text-xs text-muted-foreground">对应要求：{s.relatedRequirement}</p>}
+                            {s.relatedRequirement && <p className="mt-1 text-xs text-muted-foreground">{t("match.relatedReq")}{s.relatedRequirement}</p>}
                             <p className="mt-1 text-xs text-muted-foreground">{s.comment}</p>
                           </div>
                         </div>
@@ -220,7 +221,7 @@ const MatchPage = () => {
 
                 {result.missingItems.length > 0 && (
                   <Card>
-                    <CardHeader><CardTitle className="text-base">缺失项与建议</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">{t("match.missingTitle")}</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       {result.missingItems.map((m, i) => (
                         <div key={i} className="rounded-lg border p-3">
@@ -237,12 +238,11 @@ const MatchPage = () => {
                   </Card>
                 )}
 
-                {/* Next step CTA */}
                 <Card className="border-primary/30 bg-primary/5">
                   <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                     <div>
-                      <p className="font-medium">下一步：针对性改写或记录投递</p>
-                      <p className="text-sm text-muted-foreground">改写简历提升匹配度，或直接标记本次投递</p>
+                      <p className="font-medium">{t("match.nextStepTitle")}</p>
+                      <p className="text-sm text-muted-foreground">{t("match.nextStepDesc")}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {jobTitle && company && (
@@ -255,7 +255,7 @@ const MatchPage = () => {
                         />
                       )}
                       <Button onClick={goToRewrite}>
-                        简历改写 <ArrowRight className="ml-1 h-4 w-4" />
+                        {t("match.toRewrite")} <ArrowRight className="ml-1 h-4 w-4" />
                       </Button>
                     </div>
                   </CardContent>
