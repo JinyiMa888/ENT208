@@ -66,13 +66,17 @@ const JobsPage = () => {
     let result = jobs;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(j => j.job_title.toLowerCase().includes(term) || j.company.toLowerCase().includes(term));
+      result = result.filter(j => {
+        const title = pick(j.job_title, j.job_title_en, lang).toLowerCase();
+        const comp = pick(j.company, j.company_en, lang).toLowerCase();
+        return title.includes(term) || comp.includes(term);
+      });
     }
-    if (industryFilter !== "all") result = result.filter(j => j.industry.includes(industryFilter));
-    if (locationFilter !== "all") result = result.filter(j => j.location.includes(locationFilter));
-    if (jobTitleFilter !== "all") result = result.filter(j => j.job_title.includes(jobTitleFilter));
+    if (industryFilter !== "all") result = result.filter(j => pick(j.industry, j.industry_en, lang).includes(industryFilter));
+    if (locationFilter !== "all") result = result.filter(j => pick(j.location, j.location_en, lang).includes(locationFilter));
+    if (jobTitleFilter !== "all") result = result.filter(j => pick(j.job_title, j.job_title_en, lang).includes(jobTitleFilter));
     setFilteredJobs(result);
-  }, [jobs, searchTerm, industryFilter, locationFilter, jobTitleFilter]);
+  }, [jobs, searchTerm, industryFilter, locationFilter, jobTitleFilter, lang]);
 
   const fetchJobs = async () => {
     const { data, error } = await supabase.from("job_listings").select("*");
