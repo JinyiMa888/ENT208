@@ -4,16 +4,18 @@ import { FileText, Upload, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const ResumeUploader = () => {
   const [uploading, setUploading] = useState(false);
   const { fileName, setResume } = useResumeStore();
+  const { t } = useLanguage();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("文件大小不能超过10MB");
+      toast.error(t("uploader.tooLarge"));
       return;
     }
 
@@ -33,13 +35,11 @@ const ResumeUploader = () => {
 
       if (error) throw error;
 
-      // The analyze-resume function returns analysis, but we need the text
-      // For now, store a summary; in production, we'd have a dedicated text extraction endpoint
-      const resumeText = data?.optimizedContent || `简历文件: ${file.name}\n（简历已上传，内容已提取）`;
+      const resumeText = data?.optimizedContent || `Resume: ${file.name}`;
       setResume(resumeText, file.name);
-      toast.success("简历上传成功！");
+      toast.success(t("uploader.success"));
     } catch (err: any) {
-      toast.error(err.message || "上传失败");
+      toast.error(err.message || t("uploader.failed"));
     } finally {
       setUploading(false);
     }
@@ -50,7 +50,7 @@ const ResumeUploader = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Upload className="h-5 w-5" />
-          上传简历
+          {t("uploader.title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -68,15 +68,15 @@ const ResumeUploader = () => {
               <>
                 <CheckCircle className="mx-auto h-10 w-10 text-green-500" />
                 <p className="mt-2 text-sm font-medium">{fileName}</p>
-                <p className="mt-1 text-xs text-muted-foreground">点击重新上传</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("uploader.reupload")}</p>
               </>
             ) : (
               <>
                 <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
                 <p className="mt-2 text-sm font-medium">
-                  {uploading ? "上传中..." : "点击上传简历"}
+                  {uploading ? t("uploader.uploading") : t("uploader.click")}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">PDF、DOCX、TXT，最大10MB</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("uploader.formats")}</p>
               </>
             )}
           </label>

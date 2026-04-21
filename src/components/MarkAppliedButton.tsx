@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Send, CheckCircle2, Loader2 } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Props {
   jobListingId?: string | null;
@@ -16,10 +17,10 @@ interface Props {
 
 const MarkAppliedButton = ({ jobListingId, jobTitle, company, matchScore, size = "sm", variant = "outline" }: Props) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [applied, setApplied] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 检查是否已投递
   useEffect(() => {
     if (!user || !jobTitle || !company) return;
     let q = supabase
@@ -36,7 +37,7 @@ const MarkAppliedButton = ({ jobListingId, jobTitle, company, matchScore, size =
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
-      toast.error("请先登录后再标记投递");
+      toast.error(t("applied.loginFirst"));
       return;
     }
     if (applied) return;
@@ -52,11 +53,11 @@ const MarkAppliedButton = ({ jobListingId, jobTitle, company, matchScore, size =
     });
     setLoading(false);
     if (error) {
-      toast.error("标记失败：" + error.message);
+      toast.error(t("applied.failed") + error.message);
       return;
     }
     setApplied(true);
-    toast.success("已记录投递！数据看板会同步更新");
+    toast.success(t("applied.success"));
   };
 
   return (
@@ -73,7 +74,7 @@ const MarkAppliedButton = ({ jobListingId, jobTitle, company, matchScore, size =
       ) : (
         <Send className="mr-1 h-3.5 w-3.5" />
       )}
-      {applied ? "已投递" : "我已投递"}
+      {applied ? t("applied.done") : t("applied.mark")}
     </Button>
   );
 };
