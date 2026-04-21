@@ -124,14 +124,16 @@ const JobsPage = () => {
     }
   };
 
-  const industries = [...new Set(jobs.map(j => j.industry))];
-  const locations = [...new Set(jobs.map(j => j.location))];
+  const industries = [...new Set(jobs.map(j => pick(j.industry, j.industry_en, lang)))];
+  const locations = [...new Set(jobs.map(j => pick(j.location, j.location_en, lang)))];
 
   const jobTitleKeywords = (() => {
     const keywords = new Set<string>();
+    const patternsZh = ["专员", "经理", "主管", "总监", "工程师", "设计师", "分析师", "助理", "顾问", "架构师", "运营", "编辑", "秘书", "会计", "律师", "医生", "教师", "研究员"];
+    const patternsEn = ["Specialist", "Manager", "Supervisor", "Director", "Engineer", "Designer", "Analyst", "Assistant", "Consultant", "Architect", "Operations", "Editor", "Accountant", "Lawyer", "Doctor", "Teacher", "Researcher", "Developer"];
+    const patterns = lang === "en" ? patternsEn : patternsZh;
     jobs.forEach(j => {
-      const title = j.job_title;
-      const patterns = ["专员", "经理", "主管", "总监", "工程师", "设计师", "分析师", "助理", "顾问", "架构师", "运营", "编辑", "秘书", "会计", "律师", "医生", "教师", "研究员"];
+      const title = pick(j.job_title, j.job_title_en, lang);
       patterns.forEach(p => { if (title.includes(p)) keywords.add(p); });
     });
     return [...keywords].sort();
