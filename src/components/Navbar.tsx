@@ -23,20 +23,23 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-
-const navItems = [
-  { to: "/jobs", label: "岗位推荐", icon: Briefcase },
-  { to: "/match", label: "简历匹配", icon: FileSearch },
-  { to: "/rewrite", label: "简历改写", icon: PenTool },
-  { to: "/interview", label: "面试辅导", icon: MessageSquare },
-  { to: "/dashboard", label: "数据看板", icon: BarChart3 },
-];
+import { useLanguage } from "@/hooks/useLanguage";
+import LanguageToggle from "@/components/LanguageToggle";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { to: "/jobs", label: t("nav.jobs"), icon: Briefcase },
+    { to: "/match", label: t("nav.match"), icon: FileSearch },
+    { to: "/rewrite", label: t("nav.rewrite"), icon: PenTool },
+    { to: "/interview", label: t("nav.interview"), icon: MessageSquare },
+    { to: "/dashboard", label: t("nav.dashboard"), icon: BarChart3 },
+  ];
 
   const initials = (user?.email?.[0] || "U").toUpperCase();
 
@@ -69,6 +72,9 @@ const Navbar = () => {
             </Button>
           ))}
 
+          {/* Language toggle */}
+          <LanguageToggle className="ml-1" />
+
           {/* Auth */}
           {user ? (
             <DropdownMenu>
@@ -84,7 +90,7 @@ const Navbar = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">已登录</p>
+                    <p className="text-sm font-medium">{t("nav.loggedIn")}</p>
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
@@ -92,13 +98,13 @@ const Navbar = () => {
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard">
                     <BarChart3 className="mr-2 h-4 w-4" />
-                    数据看板
+                    {t("nav.dashboardItem")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  退出登录
+                  {t("nav.signout")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -106,56 +112,59 @@ const Navbar = () => {
             <Button size="sm" className="ml-2" asChild>
               <Link to="/auth">
                 <UserIcon className="mr-1.5 h-4 w-4" />
-                登录
+                {t("nav.signin")}
               </Link>
             </Button>
           )}
         </div>
 
         {/* Mobile nav */}
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-64">
-            <div className="mt-8 flex flex-col gap-2">
-              {navItems.map((item) => (
-                <Button
-                  key={item.to}
-                  variant={location.pathname === item.to ? "default" : "ghost"}
-                  className="justify-start"
-                  asChild
-                  onClick={() => setOpen(false)}
-                >
-                  <Link to={item.to}>
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.label}
-                  </Link>
-                </Button>
-              ))}
-              <div className="mt-4 border-t pt-4">
-                {user ? (
-                  <>
-                    <p className="px-3 pb-2 text-xs text-muted-foreground truncate">{user.email}</p>
-                    <Button variant="ghost" className="w-full justify-start" onClick={() => { setOpen(false); handleSignOut(); }}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      退出登录
-                    </Button>
-                  </>
-                ) : (
-                  <Button className="w-full" asChild onClick={() => setOpen(false)}>
-                    <Link to="/auth">
-                      <UserIcon className="mr-2 h-4 w-4" />
-                      登录 / 注册
+        <div className="flex items-center gap-1 md:hidden">
+          <LanguageToggle />
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-64">
+              <div className="mt-8 flex flex-col gap-2">
+                {navItems.map((item) => (
+                  <Button
+                    key={item.to}
+                    variant={location.pathname === item.to ? "default" : "ghost"}
+                    className="justify-start"
+                    asChild
+                    onClick={() => setOpen(false)}
+                  >
+                    <Link to={item.to}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
                     </Link>
                   </Button>
-                )}
+                ))}
+                <div className="mt-4 border-t pt-4">
+                  {user ? (
+                    <>
+                      <p className="px-3 pb-2 text-xs text-muted-foreground truncate">{user.email}</p>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { setOpen(false); handleSignOut(); }}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        {t("nav.signout")}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button className="w-full" asChild onClick={() => setOpen(false)}>
+                      <Link to="/auth">
+                        <UserIcon className="mr-2 h-4 w-4" />
+                        {t("nav.signinSignup")}
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </nav>
   );
