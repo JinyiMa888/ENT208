@@ -11,6 +11,7 @@ import ResumeUploader from "@/components/ResumeUploader";
 import MarkAppliedButton from "@/components/MarkAppliedButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useResumeStore } from "@/hooks/useResumeText";
+import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Building2, MapPin, Banknote, Search, CheckCircle, AlertTriangle, XCircle, Loader2, GraduationCap, Users, Clock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -45,6 +46,7 @@ const JobsPage = () => {
   const [jobTitleFilter, setJobTitleFilter] = useState("all");
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const { resumeText } = useResumeStore();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => { fetchJobs(); }, []);
@@ -63,7 +65,7 @@ const JobsPage = () => {
 
   const fetchJobs = async () => {
     const { data, error } = await supabase.from("job_listings").select("*");
-    if (error) { toast.error("加载岗位失败"); return; }
+    if (error) { toast.error(t("jobs.loadFailed")); return; }
     const parsed = (data || []).map(j => ({
       ...j,
       skills: Array.isArray(j.skills) ? j.skills as string[] : JSON.parse(j.skills as string || "[]"),
@@ -74,17 +76,16 @@ const JobsPage = () => {
   };
 
   const analyzeMatches = async () => {
-    if (!resumeText) { toast.error("请先上传简历"); return; }
+    if (!resumeText) { toast.error(t("jobs.uploadFirst")); return; }
     setAnalyzing(true);
     try {
-      // 传入当前过滤后的岗位列表，使用与"简历匹配分析"一致的AI评分逻辑
       const targetJobs = filteredJobs.length > 0 ? filteredJobs : jobs;
       const { data, error } = await supabase.functions.invoke("recommend-jobs", {
         body: { resumeText, jobs: targetJobs },
       });
       if (error) throw error;
       const results = data?.results;
-      if (!Array.isArray(results)) throw new Error("分析失败");
+      if (!Array.isArray(results)) throw new Error(t("jobs.analyzeFailed"));
 
       const scoreMap = new Map(results.map((r: any) => [r.id, r]));
       const scored = jobs.map(job => {
@@ -93,18 +94,14 @@ const JobsPage = () => {
         return {
           ...job,
           matchScore: r.overallScore,
-          matchReasons: {
-            matched: r.matched || [],
-            partial: r.partial || [],
-            missing: r.missing || [],
-          },
+          matchReasons: { matched: r.matched || [], partial: r.partial || [], missing: r.missing || [] },
         };
       });
       scored.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
       setJobs(scored);
-      toast.success(`匹配分析完成！共评估 ${results.length} 个岗位`);
+      toast.success(`${t("jobs.matchDone")} ${results.length} ${t("jobs.matchDoneSuffix")}`);
     } catch (err: any) {
-      toast.error(err.message || "分析失败");
+      toast.error(err.message || t("jobs.analyzeFailed"));
     } finally {
       setAnalyzing(false);
     }
@@ -113,7 +110,6 @@ const JobsPage = () => {
   const industries = [...new Set(jobs.map(j => j.industry))];
   const locations = [...new Set(jobs.map(j => j.location))];
 
-  // Extract job title keywords for filter
   const jobTitleKeywords = (() => {
     const keywords = new Set<string>();
     jobs.forEach(j => {
@@ -124,13 +120,24 @@ const JobsPage = () => {
     return [...keywords].sort();
   })();
 
-  const jobTypeLabel = (t: string) => {
-    const map: Record<string, string> = { "full-time": "全职", "part-time": "兼职", "contract": "合同", "intern": "实习" };
-    return map[t] || t;
+  const jobTypeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      "full-time": t("jobs.fullTime"),
+      "part-time": t("jobs.partTime"),
+      "contract": t("jobs.contract"),
+      "intern": t("jobs.intern"),
+    };
+    return map[type] || type;
   };
 
   const educationLabel = (e: string) => {
-    const map: Record<string, string> = { bachelor: "本科", master: "硕士", phd: "博士", associate: "大专", high_school: "高中" };
+    const map: Record<string, string> = {
+      bachelor: t("jobs.eduBachelor"),
+      master: t("jobs.eduMaster"),
+      phd: t("jobs.eduPhd"),
+      associate: t("jobs.eduAssociate"),
+      high_school: t("jobs.eduHighSchool"),
+    };
     return map[e] || e;
   };
 
@@ -139,40 +146,40 @@ const JobsPage = () => {
       <Navbar />
       <div className="container py-8">
         <WorkflowSteps />
-        <h1 className="text-3xl font-bold">岗位智能推荐</h1>
-        <p className="mt-2 text-muted-foreground">上传简历，AI 自动匹配最适合你的岗位</p>
+        <h1 className="text-3xl font-bold">{t("jobs.title")}</h1>
+        <p className="mt-2 text-muted-foreground">{t("jobs.subtitle")}</p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[300px_1fr]">
           <div className="space-y-4">
             <ResumeUploader />
             <Button className="w-full" onClick={analyzeMatches} disabled={analyzing || !resumeText}>
-              {analyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />分析中...</> : "AI 智能匹配"}
+              {analyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("jobs.analyzing")}</> : t("jobs.aiMatch")}
             </Button>
             <Card>
-              <CardHeader><CardTitle className="text-base">筛选条件</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">{t("jobs.filters")}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="搜索岗位/公司" className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                  <Input placeholder={t("jobs.searchPlaceholder")} className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                 </div>
                 <Select value={industryFilter} onValueChange={setIndustryFilter}>
-                  <SelectTrigger><SelectValue placeholder="行业" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("jobs.industry")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部行业</SelectItem>
+                    <SelectItem value="all">{t("jobs.allIndustries")}</SelectItem>
                     {industries.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={locationFilter} onValueChange={setLocationFilter}>
-                  <SelectTrigger><SelectValue placeholder="地点" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("jobs.location")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部地点</SelectItem>
+                    <SelectItem value="all">{t("jobs.allLocations")}</SelectItem>
                     {locations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={jobTitleFilter} onValueChange={setJobTitleFilter}>
-                  <SelectTrigger><SelectValue placeholder="岗位类型" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("jobs.jobType")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部岗位</SelectItem>
+                    <SelectItem value="all">{t("jobs.allJobs")}</SelectItem>
                     {jobTitleKeywords.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -184,7 +191,7 @@ const JobsPage = () => {
             {loading ? (
               <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : filteredJobs.length === 0 ? (
-              <Card className="py-20 text-center text-muted-foreground">暂无匹配的岗位</Card>
+              <Card className="py-20 text-center text-muted-foreground">{t("jobs.empty")}</Card>
             ) : (
               filteredJobs.map(job => (
                 <Card key={job.id} className="transition-shadow hover:shadow-md cursor-pointer" onClick={() => setSelectedJob(job)}>
@@ -195,7 +202,7 @@ const JobsPage = () => {
                           <h3 className="text-lg font-semibold">{job.job_title}</h3>
                           {job.matchScore !== undefined && (
                             <Badge variant={job.matchScore >= 80 ? "default" : job.matchScore >= 60 ? "secondary" : "outline"}>
-                              匹配 {job.matchScore}%
+                              {t("jobs.match")} {job.matchScore}%
                             </Badge>
                           )}
                           <Badge variant="outline" className="text-xs">{jobTypeLabel(job.job_type)}</Badge>
@@ -203,7 +210,7 @@ const JobsPage = () => {
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" />{job.company}</span>
                           <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
-                          <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{job.experience_years}年+</span>
+                          <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{job.experience_years}{t("jobs.yearsPlus")}</span>
                           <span className="flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" />{educationLabel(job.education)}</span>
                           {job.company_size && <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{job.company_size}</span>}
                           {job.salary_min && job.salary_max && (
@@ -221,19 +228,19 @@ const JobsPage = () => {
                             {job.matchReasons.matched.length > 0 && (
                               <div className="flex items-start gap-2 text-xs">
                                 <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-green-500" />
-                                <span>匹配：{job.matchReasons.matched.join("、")}</span>
+                                <span>{t("jobs.matched")}{job.matchReasons.matched.join("、")}</span>
                               </div>
                             )}
                             {job.matchReasons.partial.length > 0 && (
                               <div className="flex items-start gap-2 text-xs">
                                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-yellow-500" />
-                                <span>相关：{job.matchReasons.partial.join("、")}</span>
+                                <span>{t("jobs.partial")}{job.matchReasons.partial.join("、")}</span>
                               </div>
                             )}
                             {job.matchReasons.missing.length > 0 && (
                               <div className="flex items-start gap-2 text-xs">
                                 <XCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-500" />
-                                <span>缺失：{job.matchReasons.missing.join("、")}</span>
+                                <span>{t("jobs.missing")}{job.matchReasons.missing.join("、")}</span>
                               </div>
                             )}
                           </div>
@@ -253,10 +260,10 @@ const JobsPage = () => {
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2" onClick={e => e.stopPropagation()}>
                       <Button size="sm" onClick={() => navigate(`/match?jobId=${job.id}`)}>
-                        匹配分析 <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                        {t("jobs.matchAnalysis")} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/rewrite?jobId=${job.id}`)}>针对性改写</Button>
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/interview?jobTitle=${encodeURIComponent(job.job_title)}&company=${encodeURIComponent(job.company)}`)}>面试辅导</Button>
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/rewrite?jobId=${job.id}`)}>{t("jobs.targetedRewrite")}</Button>
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/interview?jobTitle=${encodeURIComponent(job.job_title)}&company=${encodeURIComponent(job.company)}`)}>{t("jobs.interviewCoach")}</Button>
                       <MarkAppliedButton jobListingId={job.id} jobTitle={job.job_title} company={job.company} matchScore={job.matchScore} />
                     </div>
                   </CardContent>
@@ -267,7 +274,6 @@ const JobsPage = () => {
         </div>
       </div>
 
-      {/* Job Detail Dialog */}
       <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           {selectedJob && (
@@ -284,47 +290,47 @@ const JobsPage = () => {
               <div className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div className="rounded-lg bg-muted p-3 text-center">
-                    <p className="text-xs text-muted-foreground">经验要求</p>
-                    <p className="mt-1 text-sm font-semibold">{selectedJob.experience_years}年+</p>
+                    <p className="text-xs text-muted-foreground">{t("jobs.expReq")}</p>
+                    <p className="mt-1 text-sm font-semibold">{selectedJob.experience_years}{t("jobs.yearsPlus")}</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3 text-center">
-                    <p className="text-xs text-muted-foreground">学历要求</p>
+                    <p className="text-xs text-muted-foreground">{t("jobs.eduReq")}</p>
                     <p className="mt-1 text-sm font-semibold">{educationLabel(selectedJob.education)}</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3 text-center">
-                    <p className="text-xs text-muted-foreground">薪资范围</p>
+                    <p className="text-xs text-muted-foreground">{t("jobs.salaryRange")}</p>
                     <p className="mt-1 text-sm font-semibold">
                       {selectedJob.salary_min && selectedJob.salary_max
                         ? `${selectedJob.salary_min / 1000}-${selectedJob.salary_max / 1000}K`
-                        : "面议"}
+                        : t("jobs.negotiable")}
                     </p>
                   </div>
                   <div className="rounded-lg bg-muted p-3 text-center">
-                    <p className="text-xs text-muted-foreground">公司规模</p>
-                    <p className="mt-1 text-sm font-semibold">{selectedJob.company_size || "未知"}</p>
+                    <p className="text-xs text-muted-foreground">{t("jobs.companySize")}</p>
+                    <p className="mt-1 text-sm font-semibold">{selectedJob.company_size || t("jobs.unknown")}</p>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">岗位描述</h4>
+                  <h4 className="font-semibold mb-2">{t("jobs.descTitle")}</h4>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedJob.description}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">任职要求</h4>
+                  <h4 className="font-semibold mb-2">{t("jobs.reqTitle")}</h4>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedJob.requirements}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">技能标签</h4>
+                  <h4 className="font-semibold mb-2">{t("jobs.skillsTitle")}</h4>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedJob.skills.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button onClick={() => { setSelectedJob(null); navigate(`/match?jobId=${selectedJob.id}`); }}>
-                    匹配分析 <ArrowRight className="ml-1 h-4 w-4" />
+                    {t("jobs.matchAnalysis")} <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
-                  <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/rewrite?jobId=${selectedJob.id}`); }}>针对性改写</Button>
-                  <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/interview?jobTitle=${encodeURIComponent(selectedJob.job_title)}&company=${encodeURIComponent(selectedJob.company)}`); }}>面试辅导</Button>
+                  <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/rewrite?jobId=${selectedJob.id}`); }}>{t("jobs.targetedRewrite")}</Button>
+                  <Button variant="outline" onClick={() => { setSelectedJob(null); navigate(`/interview?jobTitle=${encodeURIComponent(selectedJob.job_title)}&company=${encodeURIComponent(selectedJob.company)}`); }}>{t("jobs.interviewCoach")}</Button>
                   <MarkAppliedButton jobListingId={selectedJob.id} jobTitle={selectedJob.job_title} company={selectedJob.company} matchScore={selectedJob.matchScore} size="default" />
                 </div>
               </div>
