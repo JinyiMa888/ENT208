@@ -11,6 +11,7 @@ import WorkflowSteps from "@/components/WorkflowSteps";
 import ResumeUploader from "@/components/ResumeUploader";
 import { useResumeStore } from "@/hooks/useResumeText";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { PenTool, Loader2, ArrowRight, TrendingUp, Download, Lightbulb, FileText, FileType } from "lucide-react";
 import { exportToWord, exportToPDF } from "@/lib/resumeExport";
@@ -23,12 +24,6 @@ interface RewriteResult {
   tips: string[];
 }
 
-const styles = [
-  { id: "achievement", label: "成果导向", desc: "强调量化成果和具体贡献" },
-  { id: "responsibility", label: "职责导向", desc: "突出管理能力和工作范围" },
-  { id: "data-driven", label: "数据驱动", desc: "以数据和KPI为核心叙述" },
-];
-
 const RewritePage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -40,6 +35,13 @@ const RewritePage = () => {
   const [rewriting, setRewriting] = useState(false);
   const [result, setResult] = useState<RewriteResult | null>(null);
   const { resumeText } = useResumeStore();
+  const { t } = useLanguage();
+
+  const styles = [
+    { id: "achievement", labelKey: "rewrite.style1", descKey: "rewrite.style1Desc" },
+    { id: "responsibility", labelKey: "rewrite.style2", descKey: "rewrite.style2Desc" },
+    { id: "data-driven", labelKey: "rewrite.style3", descKey: "rewrite.style3Desc" },
+  ];
 
   useEffect(() => { if (jobId) loadJob(jobId); }, [jobId]);
 
@@ -48,13 +50,13 @@ const RewritePage = () => {
     if (data) {
       setJobTitle(data.job_title);
       setCompany(data.company);
-      setJobDescription(`${data.description}\n\n要求：${data.requirements}`);
+      setJobDescription(`${data.description}\n\n${data.requirements}`);
     }
   };
 
   const handleRewrite = async () => {
-    if (!resumeText) { toast.error("请先上传简历"); return; }
-    if (!jobTitle) { toast.error("请输入目标职位"); return; }
+    if (!resumeText) { toast.error(t("rewrite.uploadFirst")); return; }
+    if (!jobTitle) { toast.error(t("rewrite.titleRequired")); return; }
     setRewriting(true);
     setResult(null);
     try {
@@ -63,9 +65,9 @@ const RewritePage = () => {
       });
       if (error) throw error;
       setResult(data as RewriteResult);
-      toast.success("改写完成！");
+      toast.success(t("rewrite.success"));
     } catch (err: any) {
-      toast.error(err.message || "改写失败");
+      toast.error(err.message || t("rewrite.failed"));
     } finally {
       setRewriting(false);
     }
@@ -77,20 +79,20 @@ const RewritePage = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `优化简历_${jobTitle}_${selectedStyle}.txt`;
+    a.download = `Resume_${jobTitle}_${selectedStyle}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const changeTypeBadge = (type: string) => {
-    const map: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-      keyword_add: { label: "补充关键词", variant: "default" },
-      rephrase: { label: "重写表述", variant: "secondary" },
-      new_point: { label: "新增要点", variant: "outline" },
-      remove: { label: "删除冗余", variant: "destructive" },
+    const map: Record<string, { key: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+      keyword_add: { key: "rewrite.changeKeywordAdd", variant: "default" },
+      rephrase: { key: "rewrite.changeRephrase", variant: "secondary" },
+      new_point: { key: "rewrite.changeNewPoint", variant: "outline" },
+      remove: { key: "rewrite.changeRemove", variant: "destructive" },
     };
-    const info = map[type] || { label: type, variant: "outline" as const };
-    return <Badge variant={info.variant} className="text-xs">{info.label}</Badge>;
+    const info = map[type] || { key: type, variant: "outline" as const };
+    return <Badge variant={info.variant} className="text-xs">{t(info.key)}</Badge>;
   };
 
   const goToInterview = () => {
@@ -105,33 +107,33 @@ const RewritePage = () => {
       <Navbar />
       <div className="container py-8">
         <WorkflowSteps />
-        <h1 className="text-3xl font-bold">智能简历改写</h1>
-        <p className="mt-2 text-muted-foreground">3种风格一键生成针对岗位的专属简历</p>
+        <h1 className="text-3xl font-bold">{t("rewrite.title")}</h1>
+        <p className="mt-2 text-muted-foreground">{t("rewrite.subtitle")}</p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[350px_1fr]">
           <div className="space-y-4">
             <ResumeUploader />
             <Card>
-              <CardHeader><CardTitle className="text-base">改写设置</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">{t("rewrite.settings")}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <Input placeholder="目标职位 *" value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
-                <Input placeholder="目标公司" value={company} onChange={e => setCompany(e.target.value)} />
-                <Textarea placeholder="岗位描述（JD）" value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={5} />
+                <Input placeholder={t("rewrite.targetTitle")} value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
+                <Input placeholder={t("rewrite.targetCompany")} value={company} onChange={e => setCompany(e.target.value)} />
+                <Textarea placeholder={t("rewrite.jdPh")} value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={5} />
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">改写风格</p>
+                  <p className="text-sm font-medium">{t("rewrite.styleLabel")}</p>
                   {styles.map(s => (
                     <button
                       key={s.id}
                       onClick={() => setSelectedStyle(s.id)}
                       className={`w-full rounded-lg border p-3 text-left transition ${selectedStyle === s.id ? "border-primary bg-accent" : "hover:bg-muted"}`}
                     >
-                      <p className="text-sm font-medium">{s.label}</p>
-                      <p className="text-xs text-muted-foreground">{s.desc}</p>
+                      <p className="text-sm font-medium">{t(s.labelKey)}</p>
+                      <p className="text-xs text-muted-foreground">{t(s.descKey)}</p>
                     </button>
                   ))}
                 </div>
                 <Button className="w-full" onClick={handleRewrite} disabled={rewriting}>
-                  {rewriting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />改写中...</> : <><PenTool className="mr-2 h-4 w-4" />开始改写</>}
+                  {rewriting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("rewrite.rewriting")}</> : <><PenTool className="mr-2 h-4 w-4" />{t("rewrite.startBtn")}</>}
                 </Button>
               </CardContent>
             </Card>
@@ -142,7 +144,7 @@ const RewritePage = () => {
               <Card className="flex min-h-[400px] items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <PenTool className="mx-auto h-16 w-16 opacity-30" />
-                  <p className="mt-4 text-lg">上传简历，设置目标岗位和改写风格</p>
+                  <p className="mt-4 text-lg">{t("rewrite.placeholderTitle")}</p>
                 </div>
               </Card>
             )}
@@ -151,7 +153,7 @@ const RewritePage = () => {
               <Card className="flex min-h-[400px] items-center justify-center">
                 <div className="text-center">
                   <Loader2 className="mx-auto h-16 w-16 animate-spin text-primary" />
-                  <p className="mt-4 text-lg font-medium">AI 正在智能改写...</p>
+                  <p className="mt-4 text-lg font-medium">{t("rewrite.aiRewriting")}</p>
                 </div>
               </Card>
             )}
@@ -162,17 +164,17 @@ const RewritePage = () => {
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
                       <TrendingUp className="h-5 w-5 text-primary" />
-                      <span className="font-medium">预计匹配分提升 +{result.estimatedScoreImprovement}%</span>
+                      <span className="font-medium">{t("rewrite.scoreImprove")}{result.estimatedScoreImprovement}%</span>
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={downloadText}>
-                        <Download className="mr-1.5 h-4 w-4" />TXT
+                        <Download className="mr-1.5 h-4 w-4" />{t("rewrite.exportTxt")}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => exportToWord(result.rewrittenContent, jobTitle, selectedStyle)}>
-                        <FileText className="mr-1.5 h-4 w-4" />Word
+                        <FileText className="mr-1.5 h-4 w-4" />{t("rewrite.exportWord")}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => exportToPDF(result.rewrittenContent, jobTitle, selectedStyle)}>
-                        <FileType className="mr-1.5 h-4 w-4" />PDF
+                        <FileType className="mr-1.5 h-4 w-4" />{t("rewrite.exportPdf")}
                       </Button>
                     </div>
                   </CardContent>
@@ -180,16 +182,16 @@ const RewritePage = () => {
 
                 <Tabs defaultValue="tips">
                   <TabsList>
-                    <TabsTrigger value="tips">优化建议</TabsTrigger>
-                    <TabsTrigger value="compare">修改对照</TabsTrigger>
-                    <TabsTrigger value="full">完整简历</TabsTrigger>
+                    <TabsTrigger value="tips">{t("rewrite.tabTips")}</TabsTrigger>
+                    <TabsTrigger value="compare">{t("rewrite.tabCompare")}</TabsTrigger>
+                    <TabsTrigger value="full">{t("rewrite.tabFull")}</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="compare" className="space-y-3">
                     {result.addedKeywords.length > 0 && (
                       <Card>
                         <CardContent className="p-4">
-                          <p className="mb-2 text-sm font-medium">新增关键词</p>
+                          <p className="mb-2 text-sm font-medium">{t("rewrite.addedKeywords")}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {result.addedKeywords.map(k => <Badge key={k} variant="default" className="text-xs">{k}</Badge>)}
                           </div>
@@ -202,12 +204,12 @@ const RewritePage = () => {
                           <div className="mb-2">{changeTypeBadge(c.type)}</div>
                           <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr]">
                             <div className="rounded bg-red-50 p-3 text-sm dark:bg-red-950/20">
-                              <p className="mb-1 text-xs font-medium text-red-600">原文</p>
+                              <p className="mb-1 text-xs font-medium text-red-600">{t("rewrite.original")}</p>
                               {c.original}
                             </div>
                             <ArrowRight className="hidden self-center text-muted-foreground md:block" />
                             <div className="rounded bg-green-50 p-3 text-sm dark:bg-green-950/20">
-                              <p className="mb-1 text-xs font-medium text-green-600">改写</p>
+                              <p className="mb-1 text-xs font-medium text-green-600">{t("rewrite.rewritten")}</p>
                               {c.rewritten}
                             </div>
                           </div>
@@ -230,10 +232,10 @@ const RewritePage = () => {
                   <TabsContent value="tips">
                     <Card>
                       <CardContent className="space-y-3 p-6">
-                        {result.tips.map((t, i) => (
+                        {result.tips.map((tip, i) => (
                           <div key={i} className="flex gap-3 rounded-lg bg-accent p-3 text-sm">
                             <Lightbulb className="h-4 w-4 flex-shrink-0 text-primary mt-0.5" />
-                            <span>{t}</span>
+                            <span>{tip}</span>
                           </div>
                         ))}
                       </CardContent>
@@ -241,15 +243,14 @@ const RewritePage = () => {
                   </TabsContent>
                 </Tabs>
 
-                {/* Next step CTA */}
                 <Card className="border-primary/30 bg-primary/5">
                   <CardContent className="flex items-center justify-between p-4">
                     <div>
-                      <p className="font-medium">下一步：模拟面试准备</p>
-                      <p className="text-sm text-muted-foreground">用语音和 AI 面试官练习，为面试做好准备</p>
+                      <p className="font-medium">{t("rewrite.nextStepTitle")}</p>
+                      <p className="text-sm text-muted-foreground">{t("rewrite.nextStepDesc")}</p>
                     </div>
                     <Button onClick={goToInterview}>
-                      面试辅导 <ArrowRight className="ml-1 h-4 w-4" />
+                      {t("rewrite.toInterview")} <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
                   </CardContent>
                 </Card>
