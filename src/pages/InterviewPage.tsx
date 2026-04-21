@@ -20,7 +20,6 @@ import {
   Award
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useToast } from "@/hooks/use-toast";
 
 /* ── Types ── */
 interface Question {
@@ -91,13 +90,13 @@ const InterviewPage = () => {
       if (!synthRef.current) { resolve(); return; }
       synthRef.current.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "zh-CN";
+      utterance.lang = lang === "en" ? "en-US" : "zh-CN";
       utterance.rate = 0.95;
       utterance.onend = () => resolve();
       utterance.onerror = () => resolve();
       synthRef.current.speak(utterance);
     });
-  }, []);
+  }, [lang]);
 
   const requestMicPermission = useCallback(async (): Promise<boolean> => {
     try {
@@ -106,7 +105,7 @@ const InterviewPage = () => {
         if (navigator.permissions) {
           const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
           if (status.state === "denied") {
-            setMicError("麦克风权限被拒绝，请在浏览器设置中允许麦克风访问");
+            setMicError(t("interview.micDenied"));
             return false;
           }
         }
@@ -119,25 +118,25 @@ const InterviewPage = () => {
       return true;
     } catch (err: any) {
       if (err.name === "NotAllowedError") {
-        setMicError("麦克风权限被拒绝，请点击地址栏左侧的锁图标允许麦克风");
+        setMicError(t("interview.micDenied2"));
       } else if (err.name === "NotFoundError") {
-        setMicError("未检测到麦克风设备");
+        setMicError(t("interview.micNotFound"));
       } else {
-        setMicError("无法访问麦克风：" + err.message);
+        setMicError(t("interview.micCantAccess") + err.message);
       }
       return false;
     }
-  }, []);
+  }, [t]);
 
   const startListeningForAnswer = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setMicError("浏览器不支持语音识别，请使用 Chrome");
+      setMicError(t("interview.notSupported"));
       return;
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "zh-CN";
+    recognition.lang = lang === "en" ? "en-US" : "zh-CN";
     recognition.interimResults = true;
     recognition.continuous = true;
 
@@ -161,7 +160,7 @@ const InterviewPage = () => {
     recognition.onerror = (e: any) => {
       console.error("Speech recognition error:", e.error);
       if (e.error === "not-allowed") {
-        setMicError("麦克风权限被拒绝");
+        setMicError(t("interview.micDenied"));
       }
     };
 
@@ -172,7 +171,7 @@ const InterviewPage = () => {
     recognition.start();
     recognitionRef.current = recognition;
     setMockPhase("listening");
-  }, []);
+  }, [lang, t]);
 
   const generateReport = useCallback(async (history: QARecord[]) => {
     setReportLoading(true);
@@ -180,7 +179,7 @@ const InterviewPage = () => {
       const { data, error } = await supabase.functions.invoke("interview-coach", {
         body: {
           action: "generate_report",
-          jobTitle, company, resumeText,
+          jobTitle, company, resumeText, lang,
           conversationHistory: history.map(qa => ({
             question: qa.question,
             answer: qa.answer,
@@ -192,11 +191,11 @@ const InterviewPage = () => {
       if (error) throw error;
       setInterviewReport(data);
     } catch (err: any) {
-      toast.error("报告生成失败：" + (err.message || "未知错误"));
+      toast.error(t("interview.reportFailed") + (err.message || t("interview.unknownError")));
     } finally {
       setReportLoading(false);
     }
-  }, [jobTitle, company, resumeText]);
+  }, [jobTitle, company, resumeText, lang, t]);
 
   const stopListeningAndSubmit = useCallback(async () => {
     recognitionRef.current?.stop();
@@ -204,7 +203,7 @@ const InterviewPage = () => {
 
     const answer = finalTranscriptRef.current || currentTranscript;
     if (!answer.trim()) {
-      toast.error("未检测到语音内容，请重试");
+      toast.error(t("interview.noVoice"));
       setMockPhase("asking");
       return;
     }
@@ -216,7 +215,7 @@ const InterviewPage = () => {
       const { data, error } = await supabase.functions.invoke("interview-coach", {
         body: {
           action: "mock_interview",
-          jobTitle, company, resumeText,
+          jobTitle, company, resumeText, lang,
           answer,
           conversationHistory: newHistory.flatMap(qa => [
             { role: "interviewer", content: qa.question },
@@ -239,21 +238,23 @@ const InterviewPage = () => {
       setCurrentTranscript("");
 
       const nextQ = data.response || data.nextQuestion;
-      if (nextQ && !nextQ.includes("面试结束") && !nextQ.includes("总结")) {
+      const endMarkers = lang === "en" ? ["interview is over", "interview ended", "summary", "thank you for your time"] : ["面试结束", "总结"];
+      const isEnd = nextQ && endMarkers.some(m => nextQ.toLowerCase().includes(m.toLowerCase()));
+      if (nextQ && !isEnd) {
         setCurrentQuestion(nextQ);
         setMockPhase("asking");
         await speakText(nextQ);
       } else {
         setCurrentQuestion("");
         setMockPhase("done");
-        toast.success("模拟面试结束，正在生成面试报告...");
+        toast.success(t("interview.mockEnded"));
         generateReport(updatedHistory);
       }
     } catch (err: any) {
-      toast.error(err.message || "处理回答失败");
+      toast.error(err.message || t("interview.processFailed"));
       setMockPhase("asking");
     }
-  }, [qaHistory, currentQuestion, currentTranscript, jobTitle, company, resumeText, speakText, generateReport]);
+  }, [qaHistory, currentQuestion, currentTranscript, jobTitle, company, resumeText, lang, t, speakText, generateReport]);
 
   /* ── Mock interview flow ── */
   const startMockInterview = useCallback(async () => {
@@ -267,7 +268,7 @@ const InterviewPage = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("interview-coach", {
-        body: { action: "mock_interview", jobTitle, company, resumeText },
+        body: { action: "mock_interview", jobTitle, company, resumeText, lang },
       });
       if (error) throw error;
 
@@ -276,12 +277,12 @@ const InterviewPage = () => {
       setMockPhase("asking");
       await speakText(firstQ);
     } catch (err: any) {
-      toast.error(err.message || "启动面试失败");
+      toast.error(err.message || t("interview.startFailed"));
       setMockPhase("idle");
     } finally {
       setMockLoading(false);
     }
-  }, [jobTitle, company, resumeText, requestMicPermission, speakText]);
+  }, [jobTitle, company, resumeText, lang, t, requestMicPermission, speakText]);
 
   const skipQuestion = useCallback(async () => {
     recognitionRef.current?.stop();
@@ -290,11 +291,13 @@ const InterviewPage = () => {
     setMockPhase("processing");
 
     try {
-      const newHistory = [...qaHistory, { question: currentQuestion, answer: "（跳过）" }];
+      const skippedLabel = t("interview.skipped");
+      const skippedAnswer = t("interview.skippedAnswer");
+      const newHistory = [...qaHistory, { question: currentQuestion, answer: skippedLabel }];
       const { data, error } = await supabase.functions.invoke("interview-coach", {
         body: {
-          action: "mock_interview", jobTitle, company, resumeText,
-          answer: "我选择跳过这个问题",
+          action: "mock_interview", jobTitle, company, resumeText, lang,
+          answer: skippedAnswer,
           conversationHistory: newHistory.flatMap(qa => [
             { role: "interviewer", content: qa.question },
             { role: "user", content: qa.answer },
@@ -303,12 +306,14 @@ const InterviewPage = () => {
       });
       if (error) throw error;
 
-      const updatedHistory = [...qaHistory, { question: currentQuestion, answer: "（跳过）" }];
+      const updatedHistory = [...qaHistory, { question: currentQuestion, answer: skippedLabel }];
       setQaHistory(updatedHistory);
       setQuestionIndex(prev => prev + 1);
 
       const nextQ = data.response || data.nextQuestion;
-      if (nextQ && !nextQ.includes("面试结束")) {
+      const endMarkers = lang === "en" ? ["interview is over", "interview ended"] : ["面试结束"];
+      const isEnd = nextQ && endMarkers.some(m => nextQ.toLowerCase().includes(m.toLowerCase()));
+      if (nextQ && !isEnd) {
         setCurrentQuestion(nextQ);
         setMockPhase("asking");
         await speakText(nextQ);
@@ -317,10 +322,10 @@ const InterviewPage = () => {
         generateReport(updatedHistory);
       }
     } catch (err: any) {
-      toast.error(err.message || "跳过失败");
+      toast.error(err.message || t("interview.skipFailed"));
       setMockPhase("asking");
     }
-  }, [qaHistory, currentQuestion, jobTitle, company, resumeText, speakText, generateReport]);
+  }, [qaHistory, currentQuestion, jobTitle, company, resumeText, lang, t, speakText, generateReport]);
 
   const resetMockInterview = useCallback(() => {
     recognitionRef.current?.abort();
@@ -336,35 +341,35 @@ const InterviewPage = () => {
 
   /* ── Questions generation & evaluation ── */
   const generateQuestions = async () => {
-    if (!jobTitle) { toast.error("请输入目标职位"); return; }
+    if (!jobTitle) { toast.error(t("interview.titleRequired")); return; }
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("interview-coach", {
-        body: { action: "generate_questions", resumeText, jobTitle, company },
+        body: { action: "generate_questions", resumeText, jobTitle, company, lang },
       });
       if (error) throw error;
       setWeaknessQuestions(data.weaknessQuestions || []);
       setCommonQuestions(data.commonQuestions || []);
-      toast.success("面试题目生成完成！");
+      toast.success(t("interview.generateSuccess"));
     } catch (err: any) {
-      toast.error(err.message || "生成失败");
+      toast.error(err.message || t("interview.generateFailed"));
     } finally {
       setGenerating(false);
     }
   };
 
   const evaluateAnswer = async () => {
-    if (!selectedQuestion || !userAnswer) { toast.error("请选择问题并输入回答"); return; }
+    if (!selectedQuestion || !userAnswer) { toast.error(t("interview.evalRequired")); return; }
     setEvaluating(true);
     setEvalResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("interview-coach", {
-        body: { action: "evaluate_answer", question: selectedQuestion, answer: userAnswer, jobTitle, resumeText },
+        body: { action: "evaluate_answer", question: selectedQuestion, answer: userAnswer, jobTitle, resumeText, lang },
       });
       if (error) throw error;
       setEvalResult(data);
     } catch (err: any) {
-      toast.error(err.message || "评估失败");
+      toast.error(err.message || t("interview.evalFailed"));
     } finally {
       setEvaluating(false);
     }
@@ -372,9 +377,9 @@ const InterviewPage = () => {
 
   /* ── Render helpers ── */
   const difficultyBadge = (d: string) => {
-    if (d === "hard") return <Badge variant="destructive" className="text-xs">困难</Badge>;
-    if (d === "medium") return <Badge variant="secondary" className="text-xs">中等</Badge>;
-    return <Badge variant="outline" className="text-xs">简单</Badge>;
+    if (d === "hard") return <Badge variant="destructive" className="text-xs">{t("interview.diffHard")}</Badge>;
+    if (d === "medium") return <Badge variant="secondary" className="text-xs">{t("interview.diffMedium")}</Badge>;
+    return <Badge variant="outline" className="text-xs">{t("interview.diffEasy")}</Badge>;
   };
 
   const renderQuestionList = (questions: Question[], title: string, icon: React.ReactNode) => (
@@ -405,13 +410,13 @@ const InterviewPage = () => {
                     {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => { setSelectedQuestion(q.question); setActiveTab("practice"); }}>
-                    练习
+                    {t("interview.practiceBtn")}
                   </Button>
                 </div>
               </div>
               {isExpanded && q.sampleAnswer && (
                 <div className="mt-3 rounded bg-accent p-3 text-xs">
-                  <p className="font-medium">参考回答框架：</p>
+                  <p className="font-medium">{t("interview.refAnswer")}</p>
                   <p className="mt-1 whitespace-pre-wrap">{q.sampleAnswer}</p>
                 </div>
               )}
@@ -431,18 +436,18 @@ const InterviewPage = () => {
       <Navbar />
       <div className="container py-8">
         <WorkflowSteps />
-        <h1 className="text-3xl font-bold">面试智能辅导</h1>
-        <p className="mt-2 text-muted-foreground">AI 预测面试问题、语音模拟练习、实时评分</p>
+        <h1 className="text-3xl font-bold">{t("interview.title")}</h1>
+        <p className="mt-2 text-muted-foreground">{t("interview.subtitle")}</p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[300px_1fr]">
           <div className="space-y-4">
             <ResumeUploader />
             <Card>
               <CardContent className="space-y-3 pt-6">
-                <Input placeholder="目标职位 *" value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
-                <Input placeholder="目标公司" value={company} onChange={e => setCompany(e.target.value)} />
+                <Input placeholder={t("interview.targetTitle")} value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
+                <Input placeholder={t("interview.targetCompany")} value={company} onChange={e => setCompany(e.target.value)} />
                 <Button className="w-full" onClick={generateQuestions} disabled={generating}>
-                  {generating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />生成中...</> : <><Brain className="mr-2 h-4 w-4" />生成面试题</>}
+                  {generating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("interview.generating")}</> : <><Brain className="mr-2 h-4 w-4" />{t("interview.generateBtn")}</>}
                 </Button>
               </CardContent>
             </Card>
@@ -450,10 +455,10 @@ const InterviewPage = () => {
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
-              <TabsTrigger value="questions">题目预测</TabsTrigger>
-              <TabsTrigger value="practice">回答练习</TabsTrigger>
+              <TabsTrigger value="questions">{t("interview.tabQuestions")}</TabsTrigger>
+              <TabsTrigger value="practice">{t("interview.tabPractice")}</TabsTrigger>
               <TabsTrigger value="mock">
-                <Mic className="mr-1 h-3.5 w-3.5" />语音模拟面试
+                <Mic className="mr-1 h-3.5 w-3.5" />{t("interview.tabMock")}
               </TabsTrigger>
             </TabsList>
 
@@ -468,8 +473,8 @@ const InterviewPage = () => {
                 </Card>
               ) : (
                 <>
-                  {weaknessQuestions.length > 0 && renderQuestionList(weaknessQuestions, "基于简历薄弱项的追问", <Target className="h-4 w-4 text-primary" />)}
-                  {commonQuestions.length > 0 && renderQuestionList(commonQuestions, "岗位通用高频题", <Brain className="h-4 w-4 text-primary" />)}
+                  {weaknessQuestions.length > 0 && renderQuestionList(weaknessQuestions, t("interview.weaknessTitle"), <Target className="h-4 w-4 text-primary" />)}
+                  {commonQuestions.length > 0 && renderQuestionList(commonQuestions, t("interview.commonTitle"), <Brain className="h-4 w-4 text-primary" />)}
                 </>
               )}
             </TabsContent>
@@ -479,15 +484,15 @@ const InterviewPage = () => {
               <Card>
                 <CardContent className="space-y-4 pt-6">
                   <div>
-                    <p className="mb-2 text-sm font-medium">选择或输入面试问题</p>
-                    <Textarea placeholder="输入面试问题..." value={selectedQuestion} onChange={e => setSelectedQuestion(e.target.value)} rows={2} />
+                    <p className="mb-2 text-sm font-medium">{t("interview.qSelect")}</p>
+                    <Textarea placeholder={t("interview.qPlaceholder")} value={selectedQuestion} onChange={e => setSelectedQuestion(e.target.value)} rows={2} />
                   </div>
                   <div>
-                    <p className="mb-2 text-sm font-medium">你的回答</p>
-                    <Textarea placeholder="输入你的回答（建议使用STAR框架）..." value={userAnswer} onChange={e => setUserAnswer(e.target.value)} rows={6} />
+                    <p className="mb-2 text-sm font-medium">{t("interview.aLabel")}</p>
+                    <Textarea placeholder={t("interview.aPlaceholder")} value={userAnswer} onChange={e => setUserAnswer(e.target.value)} rows={6} />
                   </div>
                   <Button onClick={evaluateAnswer} disabled={evaluating} className="w-full">
-                    {evaluating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />评估中...</> : <><Star className="mr-2 h-4 w-4" />AI 评分</>}
+                    {evaluating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("interview.evaluating")}</> : <><Star className="mr-2 h-4 w-4" />{t("interview.aiScore")}</>}
                   </Button>
                 </CardContent>
               </Card>
@@ -495,7 +500,7 @@ const InterviewPage = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <span className="text-2xl font-bold">{evalResult.overallScore}分</span>
+                      <span className="text-2xl font-bold">{evalResult.overallScore}{t("interview.points")}</span>
                       <span className="text-sm text-muted-foreground">/ 100</span>
                     </CardTitle>
                   </CardHeader>
@@ -503,7 +508,7 @@ const InterviewPage = () => {
                     {evalResult.dimensions && Object.entries(evalResult.dimensions).map(([key, val]: [string, any]) => (
                       <div key={key}>
                         <div className="mb-1 flex justify-between text-sm">
-                          <span>{key === "keywordCoverage" ? "关键词覆盖" : key === "structureCompleteness" ? "结构完整性" : key === "quantification" ? "成果量化" : "相关性"}</span>
+                          <span>{key === "keywordCoverage" ? t("interview.dimKeyword") : key === "structureCompleteness" ? t("interview.dimStructure") : key === "quantification" ? t("interview.dimQuant") : t("interview.dimRelevance")}</span>
                           <span>{val.score}%</span>
                         </div>
                         <Progress value={val.score} className="h-2" />
@@ -512,19 +517,19 @@ const InterviewPage = () => {
                     ))}
                     {evalResult.strengths?.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium flex items-center gap-1" style={{ color: "hsl(var(--primary))" }}><CheckCircle className="h-3.5 w-3.5" /> 亮点</p>
+                        <p className="text-sm font-medium flex items-center gap-1" style={{ color: "hsl(var(--primary))" }}><CheckCircle className="h-3.5 w-3.5" /> {t("interview.strengths")}</p>
                         {evalResult.strengths.map((s: string, i: number) => <p key={i} className="text-xs text-muted-foreground">• {s}</p>)}
                       </div>
                     )}
                     {evalResult.improvements?.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium flex items-center gap-1 text-amber-600"><AlertTriangle className="h-3.5 w-3.5" /> 改进</p>
+                        <p className="text-sm font-medium flex items-center gap-1 text-amber-600"><AlertTriangle className="h-3.5 w-3.5" /> {t("interview.improvements")}</p>
                         {evalResult.improvements.map((s: string, i: number) => <p key={i} className="text-xs text-muted-foreground">• {s}</p>)}
                       </div>
                     )}
                     {evalResult.improvedAnswer && (
                       <div className="rounded-lg bg-accent p-3">
-                        <p className="mb-1 text-xs font-medium">优化后的回答</p>
+                        <p className="mb-1 text-xs font-medium">{t("interview.improvedAnswer")}</p>
                         <p className="whitespace-pre-wrap text-sm">{evalResult.improvedAnswer}</p>
                       </div>
                     )}
@@ -541,10 +546,9 @@ const InterviewPage = () => {
                     <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
                       <Mic className="h-10 w-10 text-primary" />
                     </div>
-                    <p className="text-xl font-semibold">语音一问一答模拟面试</p>
+                    <p className="text-xl font-semibold">{t("interview.mockTitle")}</p>
                     <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                      AI 面试官将逐题提问并朗读问题，你通过麦克风语音作答。<br />
-                      每道题回答后 AI 会即时评分，最后生成面试总结。
+                      {t("interview.mockDesc")}
                     </p>
                     {micError && (
                       <div className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
@@ -553,7 +557,7 @@ const InterviewPage = () => {
                     )}
                     <Button className="mt-6" size="lg" onClick={startMockInterview} disabled={mockLoading}>
                       {mockLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic className="mr-2 h-4 w-4" />}
-                      开始面试
+                      {t("interview.startMock")}
                     </Button>
                   </div>
                 </Card>
