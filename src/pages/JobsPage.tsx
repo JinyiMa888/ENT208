@@ -77,9 +77,11 @@ const JobsPage = () => {
   const fetchJobs = async () => {
     const { data, error } = await supabase.from("job_listings").select("*");
     if (error) { toast.error(t("jobs.loadFailed")); return; }
-    const parsed = (data || []).map(j => ({
+    const toArr = (v: any): string[] => Array.isArray(v) ? v as string[] : (typeof v === "string" ? JSON.parse(v || "[]") : []);
+    const parsed: JobListing[] = (data || []).map((j: any) => ({
       ...j,
-      skills: Array.isArray(j.skills) ? j.skills as string[] : JSON.parse(j.skills as string || "[]"),
+      skills: toArr(j.skills),
+      skills_en: toArr(j.skills_en),
     }));
     setJobs(parsed);
     setFilteredJobs(parsed);
