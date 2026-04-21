@@ -97,8 +97,21 @@ const JobsPage = () => {
     setAnalyzing(true);
     try {
       const targetJobs = filteredJobs.length > 0 ? filteredJobs : jobs;
+      // Send AI the language-appropriate job content so analysis matches user's UI language
+      const aiJobs = targetJobs.map(j => ({
+        id: j.id,
+        company: pick(j.company, j.company_en, lang),
+        job_title: pick(j.job_title, j.job_title_en, lang),
+        industry: pick(j.industry, j.industry_en, lang),
+        location: pick(j.location, j.location_en, lang),
+        description: pick(j.description, j.description_en, lang),
+        requirements: pick(j.requirements, j.requirements_en, lang),
+        skills: lang === "en" && j.skills_en?.length ? j.skills_en : j.skills,
+        experience_years: j.experience_years,
+        education: j.education,
+      }));
       const { data, error } = await supabase.functions.invoke("recommend-jobs", {
-        body: { resumeText, jobs: targetJobs, lang },
+        body: { resumeText, jobs: aiJobs, lang },
       });
       if (error) throw error;
       const results = data?.results;
