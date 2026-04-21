@@ -112,60 +112,81 @@ export type Database = {
       job_listings: {
         Row: {
           company: string
+          company_en: string | null
           company_logo: string | null
           company_size: string | null
           created_at: string
           description: string
+          description_en: string | null
           education: string | null
           experience_years: number | null
           id: string
           industry: string
+          industry_en: string | null
           job_title: string
+          job_title_en: string | null
           job_type: string
           location: string
+          location_en: string | null
           requirements: string
+          requirements_en: string | null
           salary_currency: string | null
           salary_max: number | null
           salary_min: number | null
           skills: Json
+          skills_en: Json | null
         }
         Insert: {
           company: string
+          company_en?: string | null
           company_logo?: string | null
           company_size?: string | null
           created_at?: string
           description: string
+          description_en?: string | null
           education?: string | null
           experience_years?: number | null
           id?: string
           industry: string
+          industry_en?: string | null
           job_title: string
+          job_title_en?: string | null
           job_type?: string
           location: string
+          location_en?: string | null
           requirements: string
+          requirements_en?: string | null
           salary_currency?: string | null
           salary_max?: number | null
           salary_min?: number | null
           skills?: Json
+          skills_en?: Json | null
         }
         Update: {
           company?: string
+          company_en?: string | null
           company_logo?: string | null
           company_size?: string | null
           created_at?: string
           description?: string
+          description_en?: string | null
           education?: string | null
           experience_years?: number | null
           id?: string
           industry?: string
+          industry_en?: string | null
           job_title?: string
+          job_title_en?: string | null
           job_type?: string
           location?: string
+          location_en?: string | null
           requirements?: string
+          requirements_en?: string | null
           salary_currency?: string | null
           salary_max?: number | null
           salary_min?: number | null
           skills?: Json
+          skills_en?: Json | null
         }
         Relationships: []
       }
