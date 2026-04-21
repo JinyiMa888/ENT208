@@ -19,14 +19,21 @@ import { useNavigate } from "react-router-dom";
 interface JobListing {
   id: string;
   company: string;
+  company_en: string | null;
   job_title: string;
+  job_title_en: string | null;
   industry: string;
+  industry_en: string | null;
   location: string;
+  location_en: string | null;
   salary_min: number | null;
   salary_max: number | null;
   description: string;
+  description_en: string | null;
   requirements: string;
+  requirements_en: string | null;
   skills: string[];
+  skills_en: string[];
   experience_years: number;
   education: string;
   company_size: string | null;
@@ -34,6 +41,10 @@ interface JobListing {
   matchScore?: number;
   matchReasons?: { matched: string[]; partial: string[]; missing: string[] };
 }
+
+// Language-aware field picker
+const pick = <T,>(zh: T, en: T | null | undefined, lang: string): T =>
+  lang === "en" && en != null && (typeof en !== "string" || en.length > 0) ? (en as T) : zh;
 
 const JobsPage = () => {
   const [jobs, setJobs] = useState<JobListing[]>([]);
