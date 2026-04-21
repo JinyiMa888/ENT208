@@ -568,7 +568,7 @@ const InterviewPage = () => {
                     <Card className="flex min-h-[300px] items-center justify-center">
                       <div className="text-center space-y-3">
                         <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">正在生成面试表现报告...</p>
+                        <p className="text-sm text-muted-foreground">{t("interview.reportLoading")}</p>
                       </div>
                     </Card>
                   ) : interviewReport ? (
@@ -577,7 +577,7 @@ const InterviewPage = () => {
                       <Card>
                         <CardHeader>
                           <CardTitle className="flex items-center justify-between">
-                            <span className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /> 面试表现报告</span>
+                            <span className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /> {t("interview.reportTitle")}</span>
                             <div className="text-right">
                               <span className="text-3xl font-bold">{interviewReport.overallScore}</span>
                               <span className="text-sm text-muted-foreground"> / 100</span>
@@ -592,17 +592,17 @@ const InterviewPage = () => {
                             <div className="grid gap-3">
                               {Object.entries(interviewReport.dimensions).map(([key, val]: [string, any]) => {
                                 const labels: Record<string, string> = {
-                                  professionalKnowledge: "专业知识",
-                                  communication: "沟通表达",
-                                  logicalThinking: "逻辑思维",
-                                  stressHandling: "抗压应变",
-                                  jobFit: "岗位匹配",
+                                  professionalKnowledge: t("interview.dimProf"),
+                                  communication: t("interview.dimComm"),
+                                  logicalThinking: t("interview.dimLogic"),
+                                  stressHandling: t("interview.dimStress"),
+                                  jobFit: t("interview.dimFit"),
                                 };
                                 return (
                                   <div key={key}>
                                     <div className="mb-1 flex justify-between text-sm">
                                       <span className="font-medium">{labels[key] || key}</span>
-                                      <span>{val.score}分</span>
+                                      <span>{val.score}{t("interview.points")}</span>
                                     </div>
                                     <Progress value={val.score} className="h-2" />
                                     <p className="mt-1 text-xs text-muted-foreground">{val.comment}</p>
@@ -616,7 +616,7 @@ const InterviewPage = () => {
                           <div className="grid gap-4 sm:grid-cols-2">
                             {interviewReport.strengths?.length > 0 && (
                               <div className="rounded-lg bg-primary/5 p-4">
-                                <p className="text-sm font-semibold flex items-center gap-1 mb-2"><CheckCircle className="h-4 w-4 text-primary" /> 面试亮点</p>
+                                <p className="text-sm font-semibold flex items-center gap-1 mb-2"><CheckCircle className="h-4 w-4 text-primary" /> {t("interview.highlights")}</p>
                                 {interviewReport.strengths.map((s: string, i: number) => (
                                   <p key={i} className="text-xs text-muted-foreground mb-1">• {s}</p>
                                 ))}
@@ -624,7 +624,7 @@ const InterviewPage = () => {
                             )}
                             {interviewReport.weaknesses?.length > 0 && (
                               <div className="rounded-lg bg-destructive/5 p-4">
-                                <p className="text-sm font-semibold flex items-center gap-1 mb-2"><AlertTriangle className="h-4 w-4 text-destructive" /> 待改进</p>
+                                <p className="text-sm font-semibold flex items-center gap-1 mb-2"><AlertTriangle className="h-4 w-4 text-destructive" /> {t("interview.toImprove")}</p>
                                 {interviewReport.weaknesses.map((s: string, i: number) => (
                                   <p key={i} className="text-xs text-muted-foreground mb-1">• {s}</p>
                                 ))}
@@ -640,39 +640,39 @@ const InterviewPage = () => {
                           <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-start justify-between gap-2">
                               <span>Q{i + 1}: {qr.question}</span>
-                              <Badge variant={qr.score >= 70 ? "default" : "secondary"} className="shrink-0">{qr.score}分</Badge>
+                              <Badge variant={qr.score >= 70 ? "default" : "secondary"} className="shrink-0">{qr.score}{t("interview.points")}</Badge>
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3">
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">你的回答</p>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">{t("interview.yourAnswer")}</p>
                               <p className="text-sm rounded-lg bg-muted p-3">{qr.userAnswer}</p>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">评析</p>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">{t("interview.analysis")}</p>
                               <p className="text-sm">{qr.analysis}</p>
                             </div>
                             {expandedReport === i ? (
                               <>
                                 <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
-                                  <p className="text-xs font-semibold mb-2 flex items-center gap-1"><Lightbulb className="h-3.5 w-3.5 text-primary" /> 建议回答</p>
+                                  <p className="text-xs font-semibold mb-2 flex items-center gap-1"><Lightbulb className="h-3.5 w-3.5 text-primary" /> {t("interview.suggestedAnswer")}</p>
                                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{qr.suggestedAnswer}</p>
                                 </div>
                                 {qr.improvementTips?.length > 0 && (
                                   <div>
-                                    <p className="text-xs font-semibold mb-1">改进建议</p>
+                                    <p className="text-xs font-semibold mb-1">{t("interview.improveTips")}</p>
                                     {qr.improvementTips.map((tip: string, j: number) => (
                                       <p key={j} className="text-xs text-muted-foreground mb-1">• {tip}</p>
                                     ))}
                                   </div>
                                 )}
                                 <Button size="sm" variant="ghost" onClick={() => setExpandedReport(null)}>
-                                  <ChevronUp className="mr-1 h-3.5 w-3.5" /> 收起
+                                  <ChevronUp className="mr-1 h-3.5 w-3.5" /> {t("interview.collapse")}
                                 </Button>
                               </>
                             ) : (
                               <Button size="sm" variant="outline" onClick={() => setExpandedReport(i)}>
-                                <ChevronDown className="mr-1 h-3.5 w-3.5" /> 查看建议回答与改进
+                                <ChevronDown className="mr-1 h-3.5 w-3.5" /> {t("interview.viewSuggested")}
                               </Button>
                             )}
                           </CardContent>
@@ -684,7 +684,7 @@ const InterviewPage = () => {
                         <CardContent className="pt-6 space-y-4">
                           {interviewReport.overallSuggestions?.length > 0 && (
                             <div>
-                              <p className="text-sm font-semibold flex items-center gap-1 mb-2"><TrendingUp className="h-4 w-4 text-primary" /> 整体改进建议</p>
+                              <p className="text-sm font-semibold flex items-center gap-1 mb-2"><TrendingUp className="h-4 w-4 text-primary" /> {t("interview.overallSuggestions")}</p>
                               {interviewReport.overallSuggestions.map((s: string, i: number) => (
                                 <p key={i} className="text-sm text-muted-foreground mb-1">{i + 1}. {s}</p>
                               ))}
@@ -692,14 +692,14 @@ const InterviewPage = () => {
                           )}
                           {interviewReport.nextSteps?.length > 0 && (
                             <div>
-                              <p className="text-sm font-semibold flex items-center gap-1 mb-2"><Award className="h-4 w-4 text-primary" /> 下一步行动</p>
+                              <p className="text-sm font-semibold flex items-center gap-1 mb-2"><Award className="h-4 w-4 text-primary" /> {t("interview.nextSteps")}</p>
                               {interviewReport.nextSteps.map((s: string, i: number) => (
                                 <p key={i} className="text-sm text-muted-foreground mb-1">{i + 1}. {s}</p>
                               ))}
                             </div>
                           )}
                           <Button variant="outline" className="w-full" onClick={resetMockInterview}>
-                            <RotateCcw className="mr-2 h-4 w-4" /> 重新开始
+                            <RotateCcw className="mr-2 h-4 w-4" /> {t("interview.restart")}
                           </Button>
                         </CardContent>
                       </Card>
@@ -709,8 +709,8 @@ const InterviewPage = () => {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
-                          <span>面试总结</span>
-                          <Badge variant="outline" className="text-lg px-3 py-1">{avgScore} 分</Badge>
+                          <span>{t("interview.summary")}</span>
+                          <Badge variant="outline" className="text-lg px-3 py-1">{avgScore}{t("interview.points")}</Badge>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -719,7 +719,7 @@ const InterviewPage = () => {
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-sm font-medium">Q{i + 1}: {qa.question}</p>
                               {qa.score !== undefined && (
-                                <Badge variant={qa.score >= 70 ? "default" : "secondary"} className="shrink-0">{qa.score}分</Badge>
+                                <Badge variant={qa.score >= 70 ? "default" : "secondary"} className="shrink-0">{qa.score}{t("interview.points")}</Badge>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">A: {qa.answer}</p>
@@ -727,10 +727,10 @@ const InterviewPage = () => {
                           </div>
                         ))}
                         <Button variant="outline" className="w-full" onClick={() => generateReport(qaHistory)}>
-                          <FileText className="mr-2 h-4 w-4" /> 生成详细报告
+                          <FileText className="mr-2 h-4 w-4" /> {t("interview.generateReport")}
                         </Button>
                         <Button variant="ghost" className="w-full" onClick={resetMockInterview}>
-                          <RotateCcw className="mr-2 h-4 w-4" /> 重新开始
+                          <RotateCcw className="mr-2 h-4 w-4" /> {t("interview.restart")}
                         </Button>
                       </CardContent>
                     </Card>
@@ -742,15 +742,15 @@ const InterviewPage = () => {
                   {/* Progress bar */}
                   <div className="border-b px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium">第 {questionIndex + 1} 题</span>
+                      <span className="text-sm font-medium">{lang === "en" ? `Question ${questionIndex + 1}` : `第 ${questionIndex + 1} 题`}</span>
                       {qaHistory.length > 0 && (
                         <span className="text-xs text-muted-foreground">
-                          已答 {qaHistory.length} 题 · 平均 {avgScore} 分
+                          {lang === "en" ? `Answered ${qaHistory.length} · avg ${avgScore}` : `已答 ${qaHistory.length} 题 · 平均 ${avgScore} 分`}
                         </span>
                       )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={resetMockInterview}>
-                      <StopCircle className="mr-1 h-3.5 w-3.5" /> 结束面试
+                      <StopCircle className="mr-1 h-3.5 w-3.5" /> {t("interview.endInterview")}
                     </Button>
                   </div>
 
@@ -758,11 +758,11 @@ const InterviewPage = () => {
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
                     {/* Interviewer question */}
                     <div className="w-full max-w-2xl">
-                      <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">面试官提问</p>
+                      <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">{t("interview.interviewerAsk")}</p>
                       <div className="rounded-xl bg-muted p-6">
                         <p className="text-base leading-relaxed">{currentQuestion}</p>
                         <Button size="sm" variant="ghost" className="mt-3 text-xs" onClick={() => speakText(currentQuestion)}>
-                          <Volume2 className="mr-1 h-3 w-3" /> 重新朗读
+                          <Volume2 className="mr-1 h-3 w-3" /> {t("interview.replay")}
                         </Button>
                       </div>
                     </div>
@@ -770,7 +770,7 @@ const InterviewPage = () => {
                     {/* Voice recording area */}
                     {mockPhase === "asking" && (
                       <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">准备好后，点击麦克风开始作答</p>
+                        <p className="text-sm text-muted-foreground">{t("interview.readyTip")}</p>
                         <Button
                           size="lg"
                           className="h-20 w-20 rounded-full"
@@ -780,7 +780,7 @@ const InterviewPage = () => {
                         </Button>
                         <div>
                           <Button variant="ghost" size="sm" onClick={skipQuestion}>
-                            <SkipForward className="mr-1 h-3.5 w-3.5" /> 跳过此题
+                            <SkipForward className="mr-1 h-3.5 w-3.5" /> {t("interview.skipQ")}
                           </Button>
                         </div>
                       </div>
@@ -791,7 +791,7 @@ const InterviewPage = () => {
                         {/* Listening indicator */}
                         <div className="flex items-center justify-center gap-2">
                           <div className="h-3 w-3 animate-pulse rounded-full bg-destructive" />
-                          <span className="text-sm font-medium text-destructive">正在录音...</span>
+                          <span className="text-sm font-medium text-destructive">{t("interview.recording")}</span>
                         </div>
 
                         {/* Live transcript */}
@@ -799,7 +799,7 @@ const InterviewPage = () => {
                           {currentTranscript ? (
                             <p className="text-sm leading-relaxed">{currentTranscript}</p>
                           ) : (
-                            <p className="text-sm text-muted-foreground">请开始说话，语音内容将实时显示在这里...</p>
+                            <p className="text-sm text-muted-foreground">{t("interview.transcriptHint")}</p>
                           )}
                         </div>
 
@@ -814,14 +814,14 @@ const InterviewPage = () => {
                             <MicOff className="h-8 w-8" />
                           </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">说完后点击红色按钮提交回答</p>
+                        <p className="text-xs text-muted-foreground">{t("interview.tapToSubmit")}</p>
                       </div>
                     )}
 
                     {mockPhase === "processing" && (
                       <div className="space-y-3">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">AI 正在评估你的回答...</p>
+                        <p className="text-sm text-muted-foreground">{t("interview.aiEvaluating")}</p>
                       </div>
                     )}
                   </div>
@@ -833,10 +833,10 @@ const InterviewPage = () => {
                         {qaHistory.map((qa, i) => (
                           <Badge
                             key={i}
-                            variant={qa.answer === "（跳过）" ? "outline" : qa.score && qa.score >= 70 ? "default" : "secondary"}
+                            variant={qa.answer === t("interview.skipped") ? "outline" : qa.score && qa.score >= 70 ? "default" : "secondary"}
                             className="shrink-0"
                           >
-                            Q{i + 1}: {qa.score ? `${qa.score}分` : "跳过"}
+                            Q{i + 1}: {qa.score ? `${qa.score}${t("interview.points")}` : t("interview.skipped")}
                           </Badge>
                         ))}
                       </div>
