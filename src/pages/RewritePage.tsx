@@ -35,7 +35,7 @@ const RewritePage = () => {
   const [rewriting, setRewriting] = useState(false);
   const [result, setResult] = useState<RewriteResult | null>(null);
   const { resumeText } = useResumeStore();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const styles = [
     { id: "achievement", labelKey: "rewrite.style1", descKey: "rewrite.style1Desc" },
@@ -61,7 +61,7 @@ const RewritePage = () => {
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("rewrite-resume", {
-        body: { resumeText, jobDescription, jobTitle, style: selectedStyle },
+        body: { resumeText, jobDescription, jobTitle, style: selectedStyle, lang },
       });
       if (error) throw error;
       setResult(data as RewriteResult);

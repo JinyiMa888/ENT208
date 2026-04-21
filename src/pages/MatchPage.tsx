@@ -36,7 +36,7 @@ const MatchPage = () => {
   const [result, setResult] = useState<MatchResult | null>(null);
   const { resumeText } = useResumeStore();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   useEffect(() => { if (jobId) loadJob(jobId); }, [jobId]);
 
@@ -56,7 +56,7 @@ const MatchPage = () => {
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("match-resume-job", {
-        body: { resumeText, jobDescription, jobTitle, company },
+        body: { resumeText, jobDescription, jobTitle, company, lang },
       });
       if (error) throw error;
       const matchData = data as MatchResult;
