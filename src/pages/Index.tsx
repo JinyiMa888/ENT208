@@ -15,9 +15,7 @@ const Index = () => {
     { icon: MessageSquare, titleKey: "index.feat4Title", descKey: "index.feat4Desc", link: "/interview" },
   ];
 
-  const why = [
-    "index.why1", "index.why2", "index.why3", "index.why4", "index.why5", "index.why6"
-  ];
+  const why = ["index.why1", "index.why2", "index.why3", "index.why4", "index.why5", "index.why6"];
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,17 +31,17 @@ const Index = () => {
             <Sparkles className="h-4 w-4" />
             {t("index.heroBadge")}
           </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            {t("index.heroTitle1")}
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">{t("index.heroTitle1")}</h1>
           <h1 className="mt-2 bg-gradient-to-r from-primary via-emerald-600 to-teal-500 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl">
             {t("index.heroTitle2")}
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-            {t("index.heroDesc")}
-          </p>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">{t("index.heroDesc")}</p>
           <div className="mt-10">
-            <Button size="lg" className="h-14 rounded-full px-10 text-base font-semibold shadow-lg shadow-primary/25" asChild>
+            <Button
+              size="lg"
+              className="h-14 rounded-full px-10 text-base font-semibold shadow-lg shadow-primary/25"
+              asChild
+            >
               <Link to="/jobs">
                 {t("index.cta")} <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
@@ -61,8 +59,13 @@ const Index = () => {
           <div className="mx-auto mt-14 max-w-3xl space-y-6">
             <div className="grid grid-cols-2 gap-8">
               {[1, 2].map((n) => (
-                <div key={n} className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">{n}</div>
+                <div
+                  key={n}
+                  className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+                    {n}
+                  </div>
                   <h3 className="mt-4 text-lg font-semibold">{t(`index.step${n}`)}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">{t(`index.step${n}Desc`)}</p>
                 </div>
@@ -70,8 +73,13 @@ const Index = () => {
             </div>
             <div className="grid grid-cols-2 gap-8">
               {[3, 4].map((n) => (
-                <div key={n} className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">{n}</div>
+                <div
+                  key={n}
+                  className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+                    {n}
+                  </div>
                   <h3 className="mt-4 text-lg font-semibold">{t(`index.step${n}`)}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">{t(`index.step${n}Desc`)}</p>
                 </div>
@@ -79,7 +87,9 @@ const Index = () => {
             </div>
             <div className="flex justify-center">
               <div className="flex flex-col items-center text-center rounded-2xl bg-card p-6 shadow-sm border w-full max-w-xs">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">5</div>
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+                  5
+                </div>
                 <h3 className="mt-4 text-lg font-semibold">{t("index.step5")}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{t("index.step5Desc")}</p>
               </div>
@@ -123,7 +133,10 @@ const Index = () => {
           <h2 className="text-center text-3xl font-bold">{t("index.whyTitle")}</h2>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {why.map((key, i) => (
-              <div key={i} className="flex items-start gap-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-md">
+              <div
+                key={i}
+                className="flex items-start gap-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-md"
+              >
                 <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
                 <span className="text-sm">{t(key)}</span>
               </div>
@@ -146,9 +159,7 @@ const Index = () => {
       </section>
 
       <footer className="border-t py-8">
-        <div className="container text-center text-sm text-muted-foreground">
-          {t("index.footer")}
-        </div>
+        <div className="container text-center text-sm text-muted-foreground">{t("index.footer")}</div>
       </footer>
     </div>
   );
