@@ -1,0 +1,1 @@
+DELETE FROM auth.users WHERE email = '1613454410@qq.com';
