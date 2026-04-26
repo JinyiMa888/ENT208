@@ -25,6 +25,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageToggle from "@/components/LanguageToggle";
+import AISettingsDialog from "@/components/AISettingsDialog";
 
 const Navbar = () => {
   const location = useLocation();
@@ -75,6 +76,9 @@ const Navbar = () => {
           {/* Language toggle */}
           <LanguageToggle className="ml-1" />
 
+          {/* AI Settings */}
+          <AISettingsDialog />
+
           {/* Auth */}
           {user ? (
             <DropdownMenu>
@@ -121,6 +125,7 @@ const Navbar = () => {
         {/* Mobile nav */}
         <div className="flex items-center gap-1 md:hidden">
           <LanguageToggle />
+          <AISettingsDialog />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
